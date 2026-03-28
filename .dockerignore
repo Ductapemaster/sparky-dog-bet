@@ -1,0 +1,14 @@
+node_modules/
+_gas_backup/
+.git/
+.env
+.clasp.json
+.claspignore
+SETUP.md
+CLAUDE.md
+*.md
+__pycache__/
+*.pyc
+.DS_Store
+data/
+credentials.json

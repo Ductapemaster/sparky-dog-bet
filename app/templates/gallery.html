@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="section-title">Sparky's Photos</h2>
+<p class="muted" style="margin-bottom:1.25rem;">Study him carefully. Every clue counts.</p>
+
+{% if images %}
+<div class="gallery-grid">
+  {% for img in images %}
+  <div class="gallery-item">
+    <img src="{{ url_for('main.gallery_img', filename=img.filename) }}"
+         alt="{{ img.caption or 'Sparky' }}" loading="lazy">
+    {% if img.caption %}
+    <div class="gallery-caption">{{ img.caption }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">No photos have been added yet. Check back soon!</div>
+{% endif %}
+{% endblock %}

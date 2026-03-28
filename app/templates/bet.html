@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="section-title">My Bet</h2>
+
+{# ── Submitted — read-only view ── #}
+{% if show_submitted %}
+<div class="card" style="margin-bottom:1rem;">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+    <div>
+      <strong>{{ guest.name }}</strong>
+      <div class="muted" style="font-size:0.85rem;">Submitted: {{ guest.submitted_at or 'Unknown' }}</div>
+    </div>
+    <span class="badge badge-green">✓ Bet Placed</span>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:1.25rem;">
+  <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">Your Breed Breakdown</h3>
+  <table>
+    <thead>
+      <tr><th>Breed</th><th style="text-align:right;">Percentage</th></tr>
+    </thead>
+    <tbody>
+      {% for b in bet %}
+      <tr>
+        <td>{{ b.breed }}</td>
+        <td style="text-align:right; font-weight:600;">{{ b.percentage }}%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if leaderboard %}
+<div class="card">
+  <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">🏆 Leaderboard</h3>
+  <table>
+    <thead>
+      <tr><th>#</th><th>Name</th><th style="text-align:right;">Score</th></tr>
+    </thead>
+    <tbody>
+      {% for entry in leaderboard %}
+      <tr {{ 'style="background:var(--primary-pale);"' | safe if entry.name == guest.name }}>
+        <td class="rank">{{ loop.index }}{{ ' 🏆' if loop.first }}</td>
+        <td>{{ entry.name }}{% if entry.name == guest.name %} <strong>(you)</strong>{% endif %}</td>
+        <td style="text-align:right;">{{ entry.score }} pts</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted" style="font-size:0.8rem; margin-top:0.75rem;">
+    Score = points off from actual results. Lower is better. Ties broken by submission time.
+  </p>
+</div>
+{% endif %}
+
+{# ── Betting locked ── #}
+{% elif locked %}
+<div class="card" style="text-align:center;">
+  <div style="font-size:2rem; margin-bottom:0.75rem;">🔒</div>
+  <h3 style="margin-bottom:0.5rem;">Betting is Closed</h3>
+  <p class="muted">The organizers have locked in the bets. Check back for the reveal!</p>
+</div>
+
+{# ── Bet form ── #}
+{% elif show_form %}
+<div class="card">
+  <p class="muted" style="margin-bottom:1rem;">
+    Placing bet for <strong>{{ guest.name }}</strong>.
+    Assign percentages to one or more breeds — they must add up to exactly <strong>100%</strong>.
+  </p>
+
+  {% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('main.bet_submit') }}" id="bet-form">
+    <div id="breed-rows">
+      {% if submitted_breeds %}
+        {% for b in submitted_breeds %}
+        <div class="breed-row">
+          <input type="text" name="breed[]" list="breed-list"
+                 value="{{ b.breed }}" placeholder="Search breed…" autocomplete="off" required>
+          <input type="number" name="percentage[]" class="breed-pct"
+                 value="{{ b.percentage }}" min="1" max="99" placeholder="%" required oninput="updateTotal()">
+          <button type="button" class="btn-remove" onclick="removeRow(this)">×</button>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="breed-row">
+          <input type="text" name="breed[]" list="breed-list"
+                 placeholder="Search breed…" autocomplete="off" required>
+          <input type="number" name="percentage[]" class="breed-pct"
+                 placeholder="%" min="1" max="99" required oninput="updateTotal()">
+          <button type="button" class="btn-remove" onclick="removeRow(this)">×</button>
+        </div>
+      {% endif %}
+    </div>
+
+    <datalist id="breed-list">
+      {% for b in breeds %}
+      <option value="{{ b }}">
+      {% endfor %}
+    </datalist>
+
+    <button type="button" class="btn btn-secondary" onclick="addRow()" style="margin-bottom:1rem;">
+      + Add Another Breed
+    </button>
+
+    <div class="total-bar" id="total-bar">
+      <span>Total</span>
+      <span id="total-display">0%</span>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-full" id="btn-submit" disabled>
+      Submit My Bet
+    </button>
+    <p class="muted" style="margin-top:0.75rem; font-size:0.85rem; text-align:center;">
+      ⚠️ You can only submit once. Double-check before hitting Submit.
+    </p>
+  </form>
+</div>
+
+{# ── Identity lookup ── #}
+{% else %}
+<div class="card">
+  <p class="muted" style="margin-bottom:1.25rem;">
+    Find your name to place your bet or view a previously submitted bet.
+  </p>
+
+  {% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('main.bet_verify') }}">
+    <div class="field">
+      <label for="name">Your Name</label>
+      <input type="text" name="name" id="name" list="guest-list"
+             placeholder="Start typing your name…" autocomplete="off" required
+             value="{{ selected_name or '' }}">
+      <datalist id="guest-list">
+        {% for n in guest_names %}
+        <option value="{{ n }}">
+        {% endfor %}
+      </datalist>
+    </div>
+
+    {% if status.require_pin %}
+    <div class="field">
+      <label for="phone4">Last 4 Digits of Your Phone</label>
+      <input type="tel" name="phone4" id="phone4" maxlength="4" pattern="\d{4}"
+             placeholder="e.g. 4827" inputmode="numeric" autocomplete="off">
+    </div>
+    {% endif %}
+
+    <button type="submit" class="btn btn-primary btn-full">Continue &rarr;</button>
+  </form>
+</div>
+{% endif %}
+
+<script>
+  function updateRemoveButtons() {
+    var btns = document.querySelectorAll('.btn-remove');
+    var show = btns.length > 1;
+    btns.forEach(function(b) { b.style.visibility = show ? 'visible' : 'hidden'; });
+  }
+
+  function addRow() {
+    var container = document.getElementById('breed-rows');
+    var row = document.createElement('div');
+    row.className = 'breed-row';
+    row.innerHTML =
+      '<input type="text" name="breed[]" list="breed-list" placeholder="Search breed…" autocomplete="off" required>' +
+      '<input type="number" name="percentage[]" class="breed-pct" placeholder="%" min="1" max="99" required oninput="updateTotal()">' +
+      '<button type="button" class="btn-remove" onclick="removeRow(this)">×</button>';
+    container.appendChild(row);
+    row.querySelector('input[type=text]').focus();
+    updateTotal();
+    updateRemoveButtons();
+  }
+
+  function removeRow(btn) {
+    if (document.querySelectorAll('.breed-row').length > 1) {
+      btn.closest('.breed-row').remove();
+      updateTotal();
+      updateRemoveButtons();
+    }
+  }
+
+  function updateTotal() {
+    var total = 0;
+    document.querySelectorAll('input[name="percentage[]"]').forEach(function(i) {
+      total += parseInt(i.value) || 0;
+    });
+    var bar = document.getElementById('total-bar');
+    if (!bar) return;
+    document.getElementById('total-display').textContent = total + '%';
+    bar.className = 'total-bar ' + (total === 100 ? 'total-ok' : 'total-bad');
+    document.getElementById('btn-submit').disabled = total !== 100;
+  }
+
+  document.addEventListener('DOMContentLoaded', function() { updateTotal(); updateRemoveButtons(); });
+</script>
+{% endblock %}

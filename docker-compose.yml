@@ -1,0 +1,12 @@
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - sparky_db:/app/data
+    ports:
+      - "9999:8000"
+
+volumes:
+  sparky_db:

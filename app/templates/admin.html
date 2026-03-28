@@ -1,0 +1,476 @@
+{% extends "base.html" %}
+
+{% block nav_brand_extra %}
+{% if not show_login %}<span class="admin-badge">Admin</span>{% endif %}
+{% endblock %}
+
+{% block nav_links %}
+{% if not show_login %}
+<a href="#overview" class="nav-link admin-tab" data-tab="overview">Overview</a>
+<a href="#data"     class="nav-link admin-tab" data-tab="data">Data</a>
+{% endif %}
+<form method="post" action="{{ url_for('main.admin_logout') }}" class="nav-sign-out-form">
+  <button type="submit" class="nav-sign-out">Sign Out</button>
+</form>
+{% endblock %}
+
+{% block content %}
+<h2 class="section-title">Admin Panel</h2>
+
+{# ── Login ── #}
+{% if show_login %}
+<div class="card">
+  <p class="muted" style="margin-bottom:1.25rem;">Enter the admin password to access the dashboard.</p>
+  {% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+  {% endif %}
+  <form method="post" action="{{ url_for('main.admin_login') }}">
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" name="password" id="password"
+             placeholder="Admin password" autocomplete="current-password">
+    </div>
+    <button type="submit" class="btn btn-primary btn-full">Sign In &rarr;</button>
+  </form>
+</div>
+
+{# ── Dashboard ── #}
+{% else %}
+
+{# ═══════════════════════════════════════════════ #}
+{# TAB: Overview                                   #}
+{# ═══════════════════════════════════════════════ #}
+<div id="tab-overview" class="admin-tab-panel">
+
+  <div class="stat-grid" style="margin-bottom:1.5rem;">
+    <div class="stat-box">
+      <div class="stat-num">{{ submitted }}</div>
+      <div class="stat-lbl">Submitted</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">{{ total }}</div>
+      <div class="stat-lbl">Total Guests</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">{{ total - submitted }}</div>
+      <div class="stat-lbl">Remaining</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 class="admin-sh">Game Controls</h3>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <strong>Betting</strong>
+        <span>Lock to stop new submissions</span>
+      </div>
+      <form method="post" action="{{ url_for('main.admin_toggle', key='BettingLocked') }}">
+        <button type="submit" class="btn {{ 'btn-danger' if status.locked else 'btn-secondary' }}">
+          {{ 'Unlock Betting' if status.locked else 'Lock Betting' }}
+        </button>
+      </form>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <strong>Results</strong>
+        <span>Reveal leaderboard to guests</span>
+      </div>
+      <form method="post" action="{{ url_for('main.admin_toggle', key='ResultsRevealed') }}">
+        <button type="submit" class="btn btn-secondary">
+          {{ 'Hide Results' if status.revealed else 'Reveal Results' }}
+        </button>
+      </form>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <strong>PIN Verification</strong>
+        <span>Require last-4 phone digits</span>
+      </div>
+      <form method="post" action="{{ url_for('main.admin_toggle', key='RequirePin') }}">
+        <button type="submit" class="btn btn-secondary">
+          {{ 'Disable PIN' if status.require_pin else 'Enable PIN' }}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 class="admin-sh">Leaderboard</h3>
+    {% if not has_actual %}
+    <div class="alert alert-info">Add actual DNA results in the Data tab to see scores.</div>
+    {% elif leaderboard %}
+      {% if not status.revealed %}
+      <div class="alert alert-info" style="margin-bottom:0.75rem;">
+        Results are hidden from guests. Click "Reveal Results" above to show them.
+      </div>
+      {% endif %}
+      <table>
+        <thead>
+          <tr><th>#</th><th>Name</th><th style="text-align:right;">Score</th><th>Submitted</th></tr>
+        </thead>
+        <tbody>
+          {% for entry in leaderboard %}
+          <tr>
+            <td class="rank">{{ loop.index }}{{ ' 🏆' if loop.first }}</td>
+            <td>{{ entry.name }}</td>
+            <td style="text-align:right;">{{ entry.score }}</td>
+            <td class="muted" style="font-size:0.85rem;">{{ entry.submitted_at or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="muted" style="font-size:0.8rem; margin-top:0.75rem;">
+        Lower score = closer to actual results. Ties broken by submission time.
+      </p>
+    {% else %}
+    <p class="muted">No bets submitted yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 class="admin-sh">Guest Submission Status</h3>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Status</th><th>Time</th></tr>
+      </thead>
+      <tbody>
+        {% for g in guests %}
+        <tr>
+          <td>{{ g.name }}</td>
+          <td>
+            {% if g.has_submitted %}
+            <span class="badge badge-green">✓ Submitted</span>
+            {% else %}
+            <span class="badge badge-muted">Pending</span>
+            {% endif %}
+          </td>
+          <td class="muted" style="font-size:0.85rem;">{{ g.submitted_at or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>{# /tab-overview #}
+
+{# ═══════════════════════════════════════════════ #}
+{# TAB: Data                                       #}
+{# ═══════════════════════════════════════════════ #}
+<div id="tab-data" class="admin-tab-panel">
+
+  {# Guests #}
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 class="admin-sh">Guests</h3>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>PIN</th><th>Status</th><th>Submitted</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for g in guests %}
+        <tr>
+          <td>{{ g.name }}</td>
+          <td class="muted">{{ g.phone4 or '—' }}</td>
+          <td>
+            {% if g.has_submitted %}
+            <span class="badge badge-green">✓ Submitted</span>
+            {% else %}
+            <span class="badge badge-muted">Pending</span>
+            {% endif %}
+          </td>
+          <td class="muted" style="font-size:0.85rem;">{{ g.submitted_at or '—' }}</td>
+          <td style="white-space:nowrap;">
+            <button type="button" class="btn btn-secondary btn-sm"
+                    onclick="toggleRow('eg{{ g.id }}')">Edit</button>
+            {% if g.has_submitted %}
+            <form method="post" action="{{ url_for('main.admin_guests_reset_bet', guest_id=g.id) }}"
+                  style="display:inline;"
+                  onsubmit="return confirm('Reset bet for {{ g.name }}? They can then re-submit.')">
+              <button type="submit" class="btn btn-secondary btn-sm">Reset Bet</button>
+            </form>
+            {% endif %}
+            <form method="post" action="{{ url_for('main.admin_guests_delete', guest_id=g.id) }}"
+                  style="display:inline;"
+                  onsubmit="return confirm('Delete {{ g.name }} and all their bets?')">
+              <button type="submit" class="btn btn-danger btn-sm">Del</button>
+            </form>
+          </td>
+        </tr>
+        <tr id="eg{{ g.id }}" style="display:none; background:var(--primary-pale);">
+          <td colspan="5">
+            <form method="post" action="{{ url_for('main.admin_guests_edit', guest_id=g.id) }}"
+                  class="inline-form">
+              <input type="text" name="name" value="{{ g.name }}" placeholder="Name" required>
+              <input type="text" name="phone4" value="{{ g.phone4 }}" placeholder="Last 4"
+                     maxlength="4" style="width:80px;">
+              <button type="submit" class="btn btn-primary btn-sm">Save</button>
+              <button type="button" class="btn btn-secondary btn-sm"
+                      onclick="toggleRow('eg{{ g.id }}')">Cancel</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <details style="margin-top:1rem;">
+      <summary class="btn btn-secondary btn-sm" style="display:inline-block; cursor:pointer;">
+        + Add Guest
+      </summary>
+      <form method="post" action="{{ url_for('main.admin_guests_add') }}" class="inline-form"
+            style="margin-top:0.75rem;">
+        <input type="text" name="name" placeholder="Full name" required>
+        <input type="text" name="phone4" placeholder="Last 4 digits" maxlength="4" style="width:90px;">
+        <button type="submit" class="btn btn-primary btn-sm">Add</button>
+      </form>
+    </details>
+  </div>
+
+  {# Bets #}
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 class="admin-sh">Submitted Bets</h3>
+    <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
+      Delete a single row to remove one breed entry. Use "Reset Bet" in the Guests table above
+      to clear someone's full submission and let them re-submit.
+    </p>
+    {% if all_bets %}
+    <table>
+      <thead>
+        <tr><th>Guest</th><th>Breed</th><th style="text-align:right;">%</th><th>Time</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for b in all_bets %}
+        <tr>
+          <td>{{ b.guest_name }}</td>
+          <td>{{ b.breed }}</td>
+          <td style="text-align:right; font-weight:600;">{{ b.percentage }}%</td>
+          <td class="muted" style="font-size:0.85rem;">{{ b.submitted_at or '—' }}</td>
+          <td>
+            <form method="post" action="{{ url_for('main.admin_bets_delete', bet_id=b.id) }}"
+                  onsubmit="return confirm('Delete this bet row?')">
+              <button type="submit" class="btn btn-danger btn-sm">Del</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No bets submitted yet.</p>
+    {% endif %}
+  </div>
+
+  {# Actual Results #}
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 class="admin-sh">Actual DNA Results</h3>
+    <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
+      Enter Sparky's real breed breakdown. Scores are computed against these values.
+    </p>
+    {% if actual_results %}
+    <table style="margin-bottom:1rem;">
+      <thead>
+        <tr><th>Breed</th><th style="text-align:right;">%</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for r in actual_results %}
+        <tr>
+          <td>{{ r.breed }}</td>
+          <td style="text-align:right; font-weight:600;">{{ r.actual_percentage }}%</td>
+          <td style="white-space:nowrap;">
+            <button type="button" class="btn btn-secondary btn-sm"
+                    onclick="toggleRow('ea{{ r.id }}')">Edit</button>
+            <form method="post" action="{{ url_for('main.admin_actual_delete', result_id=r.id) }}"
+                  style="display:inline;" onsubmit="return confirm('Delete this result?')">
+              <button type="submit" class="btn btn-danger btn-sm">Del</button>
+            </form>
+          </td>
+        </tr>
+        <tr id="ea{{ r.id }}" style="display:none; background:var(--primary-pale);">
+          <td colspan="3">
+            <form method="post" action="{{ url_for('main.admin_actual_edit', result_id=r.id) }}"
+                  class="inline-form">
+              <input type="text" name="breed" value="{{ r.breed }}" placeholder="Breed" required>
+              <input type="number" name="pct" value="{{ r.actual_percentage }}"
+                     placeholder="%" step="0.1" min="0" max="100" required style="width:75px;">
+              <button type="submit" class="btn btn-primary btn-sm">Save</button>
+              <button type="button" class="btn btn-secondary btn-sm"
+                      onclick="toggleRow('ea{{ r.id }}')">Cancel</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    <details>
+      <summary class="btn btn-secondary btn-sm" style="display:inline-block; cursor:pointer;">
+        + Add Result
+      </summary>
+      <form method="post" action="{{ url_for('main.admin_actual_add') }}" class="inline-form"
+            style="margin-top:0.75rem;">
+        <input type="text" name="breed" placeholder="Breed name" required>
+        <input type="number" name="pct" placeholder="%" step="0.1" min="0" max="100"
+               required style="width:75px;">
+        <button type="submit" class="btn btn-primary btn-sm">Add</button>
+      </form>
+    </details>
+  </div>
+
+  {# Gallery #}
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 class="admin-sh">Gallery Photos</h3>
+    <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
+      Images are stored on the server. To replace a photo, delete it and re-upload.
+      Lower sort order = appears first.
+    </p>
+    {% if gallery %}
+    <table style="margin-bottom:1rem;">
+      <thead>
+        <tr><th>File</th><th>Caption</th><th>Order</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for img in gallery %}
+        <tr>
+          <td style="font-size:0.8rem; max-width:120px;
+                     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            {{ img.filename }}
+          </td>
+          <td>{{ img.caption or '—' }}</td>
+          <td>{{ img.sort_order }}</td>
+          <td style="white-space:nowrap;">
+            <button type="button" class="btn btn-secondary btn-sm"
+                    onclick="toggleRow('egi{{ img.id }}')">Edit</button>
+            <form method="post" action="{{ url_for('main.admin_gallery_delete', image_id=img.id) }}"
+                  style="display:inline;" onsubmit="return confirm('Delete this photo?')">
+              <button type="submit" class="btn btn-danger btn-sm">Del</button>
+            </form>
+          </td>
+        </tr>
+        <tr id="egi{{ img.id }}" style="display:none; background:var(--primary-pale);">
+          <td colspan="4">
+            <form method="post" action="{{ url_for('main.admin_gallery_edit', image_id=img.id) }}"
+                  class="inline-form">
+              <input type="text" name="caption" value="{{ img.caption }}" placeholder="Caption"
+                     style="flex:2;">
+              <input type="number" name="sort_order" value="{{ img.sort_order }}"
+                     placeholder="Order" style="width:60px;">
+              <button type="submit" class="btn btn-primary btn-sm">Save</button>
+              <button type="button" class="btn btn-secondary btn-sm"
+                      onclick="toggleRow('egi{{ img.id }}')">Cancel</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    <details>
+      <summary class="btn btn-secondary btn-sm" style="display:inline-block; cursor:pointer;">
+        + Upload Photo
+      </summary>
+      <form method="post" action="{{ url_for('main.admin_gallery_upload') }}"
+            enctype="multipart/form-data" style="margin-top:0.75rem;">
+        <div class="inline-form">
+          <input type="file" name="image" accept="image/*" required
+                 style="flex:2; min-width:0; padding:0.4rem;">
+          <input type="text" name="caption" placeholder="Caption" style="flex:1;">
+          <input type="number" name="sort_order" placeholder="Order" value="0" style="width:60px;">
+          <button type="submit" class="btn btn-primary btn-sm">Upload</button>
+        </div>
+      </form>
+    </details>
+  </div>
+
+  {# Danger Zone #}
+  <div class="card danger-zone" style="margin-bottom:2rem;">
+    <h3 class="admin-sh" style="color:#c0392b;">⚠ Danger Zone</h3>
+    <strong>Wipe All Bets</strong>
+    <p class="muted" style="margin:0.25rem 0 0.75rem; font-size:0.85rem;">
+      Deletes <em>every</em> submitted bet and resets all guests to "not submitted".
+      This cannot be undone. For testing only — do not use once the game has started.
+    </p>
+    <div id="wipe-1">
+      <button type="button" class="btn btn-danger"
+              onclick="document.getElementById('wipe-1').style.display='none';
+                       document.getElementById('wipe-2').style.display='block';">
+        Wipe All Bets
+      </button>
+    </div>
+    <div id="wipe-2" style="display:none;">
+      <p style="color:#c0392b; font-weight:700; margin:0 0 0.5rem;">
+        Are you absolutely sure? ALL bets will be permanently deleted.
+      </p>
+      <form method="post" action="{{ url_for('main.admin_wipe_all_bets') }}" style="display:inline;">
+        <button type="submit" class="btn btn-danger">Yes, Delete Everything</button>
+      </form>
+      <button type="button" class="btn btn-secondary" style="margin-left:0.5rem;"
+              onclick="document.getElementById('wipe-2').style.display='none';
+                       document.getElementById('wipe-1').style.display='block';">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+</div>{# /tab-data #}
+
+<script>
+  function toggleRow(id) {
+    var el = document.getElementById(id);
+    el.style.display = (el.style.display === '' || el.style.display === 'none')
+      ? 'table-row' : 'none';
+  }
+
+  (function () {
+    var tabs   = document.querySelectorAll('.admin-tab');
+    var panels = document.querySelectorAll('.admin-tab-panel');
+
+    function showTab(name) {
+      panels.forEach(function (p) { p.style.display = 'none'; });
+      tabs.forEach(function (t) { t.classList.remove('active'); });
+      var panel = document.getElementById('tab-' + name);
+      if (panel) panel.style.display = '';
+      tabs.forEach(function (t) {
+        if (t.dataset.tab === name) t.classList.add('active');
+      });
+    }
+
+    // Read hash on load; default to overview
+    var initial = (window.location.hash || '#overview').replace('#', '');
+    showTab(initial);
+
+    // Update on hash change (back/forward)
+    window.addEventListener('hashchange', function () {
+      showTab(window.location.hash.replace('#', '') || 'overview');
+    });
+
+    // Store hash before any form POST so the redirect lands on the same tab
+    document.querySelectorAll('form[method=post]').forEach(function (form) {
+      form.addEventListener('submit', function () {
+        var active = document.querySelector('.admin-tab.active');
+        if (active) sessionStorage.setItem('adminTab', active.dataset.tab);
+      });
+    });
+
+    // Restore tab after a POST-redirect
+    var saved = sessionStorage.getItem('adminTab');
+    if (saved) {
+      sessionStorage.removeItem('adminTab');
+      showTab(saved);
+      history.replaceState(null, '', '#' + saved);
+    }
+  })();
+</script>
+
+<style>
+  .admin-sh {
+    font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.75rem;
+  }
+  .btn-sm { font-size: 0.8rem; padding: 0.28rem 0.6rem; }
+  .inline-form {
+    display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; padding: 0.4rem 0;
+  }
+  .inline-form input[type=text],
+  .inline-form input[type=number] { flex: 1; min-width: 120px; }
+  .danger-zone { border: 2px solid #c0392b; }
+</style>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sparky's DNA Bet 🐾</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="nav">
+    <a href="{{ url_for('main.home') }}" class="nav-brand">🐾 Sparky's DNA Bet</a>{% block nav_brand_extra %}{% endblock %}
+    <div class="nav-links">
+      {% block nav_links %}
+      <a href="{{ url_for('main.gallery') }}"
+         class="nav-link {{ 'active' if request.endpoint == 'main.gallery' }}">Photos</a>
+      <a href="{{ url_for('main.about') }}"
+         class="nav-link {{ 'active' if request.endpoint == 'main.about' }}">About</a>
+      <a href="{{ url_for('main.bet') }}"
+         class="nav-link {{ 'active' if request.endpoint in ('main.bet','main.bet_verify','main.bet_submit') }}">My Bet</a>
+      {% endblock %}
+    </div>
+  </nav>
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

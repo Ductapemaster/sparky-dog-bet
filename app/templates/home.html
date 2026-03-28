@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="hero">
+  <div class="hero-paw">🐾</div>
+  <h1>What's Sparky made of?</h1>
+  <p>
+    We rescued Sparky and had his DNA tested — but we're not telling anyone the results just yet.
+    For $1, take a guess at his breed breakdown. Closest answer wins the pot!
+  </p>
+  <a href="{{ url_for('main.bet') }}" class="btn btn-primary" style="font-size:1.05rem; padding:0.8rem 2rem;">
+    Place My Bet &rarr;
+  </a>
+</div>
+
+<div class="nav-cards">
+  <a href="{{ url_for('main.gallery') }}" class="nav-card">
+    <div class="nav-card-icon">📷</div>
+    <div class="nav-card-label">Photo Gallery</div>
+  </a>
+  <a href="{{ url_for('main.about') }}" class="nav-card">
+    <div class="nav-card-icon">🐕</div>
+    <div class="nav-card-label">About Sparky</div>
+  </a>
+  <a href="{{ url_for('main.bet') }}" class="nav-card">
+    <div class="nav-card-icon">🎯</div>
+    <div class="nav-card-label">My Bet</div>
+  </a>
+</div>
+
+<div style="margin-top:2rem; text-align:center; color:var(--muted); font-size:0.85rem;">
+  Questions? Find Dan or [Partner's Name] at the party.
+</div>
+{% endblock %}
