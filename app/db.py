@@ -264,9 +264,9 @@ def delete_breed(breed_id):
 def get_gallery_images():
     with _get_db() as conn:
         rows = conn.execute(
-            "SELECT file_id, caption FROM gallery ORDER BY sort_order, id"
+            "SELECT file_id FROM gallery ORDER BY sort_order, id"
         ).fetchall()
-        return [{'filename': r['file_id'], 'caption': r['caption'] or ''} for r in rows]
+        return [{'filename': r['file_id']} for r in rows]
 
 
 # ── Scoring ───────────────────────────────────────────────────
@@ -400,34 +400,26 @@ def get_all_gallery():
     """Full gallery rows including id and sort_order, for admin use."""
     with _get_db() as conn:
         rows = conn.execute(
-            "SELECT id, file_id, caption, sort_order FROM gallery ORDER BY sort_order, id"
+            "SELECT id, file_id, sort_order FROM gallery ORDER BY sort_order, id"
         ).fetchall()
         return [
-            {
-                'id':         r['id'],
-                'filename':   r['file_id'],
-                'caption':    r['caption'] or '',
-                'sort_order': r['sort_order'],
-            }
+            {'id': r['id'], 'filename': r['file_id'], 'sort_order': r['sort_order']}
             for r in rows
         ]
 
 
-def add_gallery_image(filename, caption='', sort_order=0):
+def add_gallery_image(filename, sort_order=0):
     with _get_db() as conn:
         conn.execute(
-            "INSERT INTO gallery (file_id, caption, sort_order) VALUES (?, ?, ?)",
-            (str(filename).strip(), str(caption).strip(), int(sort_order or 0))
+            "INSERT INTO gallery (file_id, sort_order) VALUES (?, ?)",
+            (str(filename).strip(), int(sort_order or 0))
         )
 
 
-def update_gallery_image(image_id, caption='', sort_order=0):
-    """Update caption and sort order only. To replace the image, delete and re-upload."""
+def reorder_gallery(id_list):
     with _get_db() as conn:
-        conn.execute(
-            "UPDATE gallery SET caption = ?, sort_order = ? WHERE id = ?",
-            (str(caption).strip(), int(sort_order or 0), image_id)
-        )
+        for i, img_id in enumerate(id_list):
+            conn.execute("UPDATE gallery SET sort_order = ? WHERE id = ?", (i, int(img_id)))
 
 
 def delete_gallery_image(image_id):

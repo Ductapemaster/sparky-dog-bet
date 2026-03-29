@@ -381,8 +381,6 @@ _ALLOWED_IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
 def admin_gallery_upload():
     if denied := _require_admin(): return denied
     file       = request.files.get('image')
-    caption    = request.form.get('caption', '').strip()
-    sort_order = request.form.get('sort_order', '0').strip()
 
     if file and file.filename:
         ext = os.path.splitext(file.filename)[1].lower()
@@ -398,23 +396,22 @@ def admin_gallery_upload():
                 n += 1
             file.save(os.path.join(gallery_dir, candidate))
             try:
-                db.add_gallery_image(candidate, caption, int(sort_order or 0))
+                db.add_gallery_image(candidate)
             except ValueError:
                 pass
 
     return redirect(url_for('main.admin'))
 
 
-@bp.route('/admin/gallery/<int:image_id>/edit', methods=['POST'])
-def admin_gallery_edit(image_id):
-    if denied := _require_admin(): return denied
-    caption    = request.form.get('caption', '').strip()
-    sort_order = request.form.get('sort_order', '0').strip()
-    try:
-        db.update_gallery_image(image_id, caption, int(sort_order or 0))
-    except ValueError:
-        pass
-    return redirect(url_for('main.admin'))
+@bp.route('/admin/gallery/reorder', methods=['POST'])
+def admin_gallery_reorder():
+    if not session.get('admin_auth'):
+        return '', 403
+    data  = request.get_json(silent=True) or {}
+    order = data.get('order', [])
+    if order:
+        db.reorder_gallery(order)
+    return '', 204
 
 
 @bp.route('/admin/gallery/<int:image_id>/delete', methods=['POST'])
