@@ -110,7 +110,7 @@
     letter-spacing: 0.04em;
   }
 
-  input, select {
+  input, select, textarea {
     width: 100%;
     padding: 0.65rem 0.85rem;
     border: 1.5px solid var(--border);
@@ -129,7 +129,8 @@
     padding-right: 2.5rem;
     cursor: pointer;
   }
-  input:focus, select:focus {
+  textarea { line-height: 1.5; }
+  input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(74,124,89,0.12);

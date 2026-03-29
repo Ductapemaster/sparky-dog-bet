@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="section-title">My Bet</h2>
+<h2 class="section-title">Bet</h2>
 
 {# ── Submitted — read-only view ── #}
 {% if show_submitted %}
@@ -62,8 +62,21 @@
   <p class="muted">The organizers have locked in the bets. Check back for the reveal!</p>
 </div>
 
-{# ── Bet form ── #}
-{% elif show_form %}
+{# ── Bet form or identity lookup (rules always shown) ── #}
+{% else %}
+<div class="card" style="margin-bottom:1.25rem;">
+  <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">The Rules</h3>
+  <ul style="padding-left:1.25rem; line-height:2;">
+    <li>Entry fee: <strong>$1 per person</strong> (cash to Dan, Zoe, or Carly)</li>
+    <li>Select one or more breeds and assign a percentage to each</li>
+    <li>Your percentages must add up to exactly <strong>100%</strong></li>
+    <li>One entry per guest — no changes after you submit</li>
+    <li>Scoring: lowest total difference from the actual results wins</li>
+    <li>Ties broken by who submitted first</li>
+  </ul>
+</div>
+
+{% if show_form %}
 <div class="card">
   <p class="muted" style="margin-bottom:1rem;">
     Placing bet for <strong>{{ guest.name }}</strong>.
@@ -75,12 +88,23 @@
   {% endif %}
 
   <form method="post" action="{{ url_for('main.bet_submit') }}" id="bet-form">
+    <select id="breed-select-template" name="breed[]" required style="display:none;">
+      <option value="">— Select a breed —</option>
+      {% for b in breeds %}
+      <option value="{{ b }}">{{ b }}</option>
+      {% endfor %}
+    </select>
+
     <div id="breed-rows">
       {% if submitted_breeds %}
         {% for b in submitted_breeds %}
         <div class="breed-row">
-          <input type="text" name="breed[]" list="breed-list"
-                 value="{{ b.breed }}" placeholder="Search breed…" autocomplete="off" required>
+          <select name="breed[]" required>
+            <option value="">— Select a breed —</option>
+            {% for breed in breeds %}
+            <option value="{{ breed }}" {{ 'selected' if breed == b.breed }}>{{ breed }}</option>
+            {% endfor %}
+          </select>
           <input type="number" name="percentage[]" class="breed-pct"
                  value="{{ b.percentage }}" min="1" max="99" placeholder="%" required oninput="updateTotal()">
           <button type="button" class="btn-remove" onclick="removeRow(this)">×</button>
@@ -88,20 +112,18 @@
         {% endfor %}
       {% else %}
         <div class="breed-row">
-          <input type="text" name="breed[]" list="breed-list"
-                 placeholder="Search breed…" autocomplete="off" required>
+          <select name="breed[]" required>
+            <option value="">— Select a breed —</option>
+            {% for b in breeds %}
+            <option value="{{ b }}">{{ b }}</option>
+            {% endfor %}
+          </select>
           <input type="number" name="percentage[]" class="breed-pct"
                  placeholder="%" min="1" max="99" required oninput="updateTotal()">
           <button type="button" class="btn-remove" onclick="removeRow(this)">×</button>
         </div>
       {% endif %}
     </div>
-
-    <datalist id="breed-list">
-      {% for b in breeds %}
-      <option value="{{ b }}">
-      {% endfor %}
-    </datalist>
 
     <button type="button" class="btn btn-secondary" onclick="addRow()" style="margin-bottom:1rem;">
       + Add Another Breed
@@ -121,7 +143,6 @@
   </form>
 </div>
 
-{# ── Identity lookup ── #}
 {% else %}
 <div class="card">
   <p class="muted" style="margin-bottom:1.25rem;">
@@ -157,6 +178,7 @@
   </form>
 </div>
 {% endif %}
+{% endif %}
 
 <script>
   function updateRemoveButtons() {
@@ -167,14 +189,25 @@
 
   function addRow() {
     var container = document.getElementById('breed-rows');
+    var tmpl = document.getElementById('breed-select-template');
+    var sel = tmpl.cloneNode(true);
+    sel.id = '';
+    sel.style.display = '';
+    sel.value = '';
     var row = document.createElement('div');
     row.className = 'breed-row';
-    row.innerHTML =
-      '<input type="text" name="breed[]" list="breed-list" placeholder="Search breed…" autocomplete="off" required>' +
-      '<input type="number" name="percentage[]" class="breed-pct" placeholder="%" min="1" max="99" required oninput="updateTotal()">' +
-      '<button type="button" class="btn-remove" onclick="removeRow(this)">×</button>';
+    row.appendChild(sel);
+    var pct = document.createElement('input');
+    pct.type = 'number'; pct.name = 'percentage[]'; pct.className = 'breed-pct';
+    pct.placeholder = '%'; pct.min = '1'; pct.max = '99'; pct.required = true;
+    pct.setAttribute('oninput', 'updateTotal()');
+    row.appendChild(pct);
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'btn-remove'; btn.textContent = '×';
+    btn.setAttribute('onclick', 'removeRow(this)');
+    row.appendChild(btn);
     container.appendChild(row);
-    row.querySelector('input[type=text]').focus();
+    sel.focus();
     updateTotal();
     updateRemoveButtons();
   }

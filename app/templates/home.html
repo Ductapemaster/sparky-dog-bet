@@ -7,27 +7,81 @@
     We rescued Sparky and had his DNA tested — but we're not telling anyone the results just yet.
     For $1, take a guess at his breed breakdown. Closest answer wins the pot!
   </p>
-  <a href="{{ url_for('main.bet') }}" class="btn btn-primary" style="font-size:1.05rem; padding:0.8rem 2rem;">
-    Place My Bet &rarr;
-  </a>
 </div>
 
-<div class="nav-cards">
-  <a href="{{ url_for('main.gallery') }}" class="nav-card">
-    <div class="nav-card-icon">📷</div>
-    <div class="nav-card-label">Photo Gallery</div>
+<div class="path-cards">
+  <a href="{{ url_for('main.about') }}" class="path-card">
+    <div class="path-card-icon">🐕</div>
+    <div class="path-card-title">About Sparky</div>
+    <div class="path-card-desc">Meet the pup, see his photos, and study the evidence before you guess.</div>
   </a>
-  <a href="{{ url_for('main.about') }}" class="nav-card">
-    <div class="nav-card-icon">🐕</div>
-    <div class="nav-card-label">About Sparky</div>
-  </a>
-  <a href="{{ url_for('main.bet') }}" class="nav-card">
-    <div class="nav-card-icon">🎯</div>
-    <div class="nav-card-label">My Bet</div>
+  <div class="path-divider">or</div>
+  <a href="{{ url_for('main.bet') }}" class="path-card path-card-primary">
+    <div class="path-card-icon">🎯</div>
+    <div class="path-card-title">Place My Bet</div>
+    <div class="path-card-desc">Ready to guess? Pick your breeds, assign percentages, and submit your $1 entry.</div>
   </a>
 </div>
 
 <div style="margin-top:2rem; text-align:center; color:var(--muted); font-size:0.85rem;">
-  Questions? Find Dan or [Partner's Name] at the party.
+  Questions? Find Dan, Zoe, or Carly at the party.
 </div>
+
+<style>
+  .path-cards {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-top: 0.5rem;
+  }
+
+  .path-divider {
+    display: flex;
+    align-items: center;
+    padding: 0 1.25rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-style: italic;
+    flex-shrink: 0;
+  }
+
+  .path-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2rem 1.5rem;
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    text-decoration: none;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  }
+  .path-card:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+    text-decoration: none;
+    color: var(--text);
+  }
+  .path-card-primary {
+    border-color: var(--primary);
+    background: var(--primary-pale);
+  }
+  .path-card-primary:hover {
+    background: #d5e8d9;
+  }
+
+  .path-card-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  .path-card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .path-card-desc { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
+
+  @media (max-width: 480px) {
+    .path-cards { flex-direction: column; gap: 0.75rem; }
+    .path-divider { justify-content: center; padding: 0; }
+    .path-card { padding: 1.5rem 1.25rem; }
+  }
+</style>
 {% endblock %}

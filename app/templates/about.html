@@ -1,40 +1,135 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="section-title">About Sparky</h2>
+<h2 class="section-title">Sparky</h2>
 
 <div class="card" style="margin-bottom:1.25rem;">
   <p style="margin-bottom:1rem;">
-    <!-- TODO: Replace with Sparky's story -->
-    Sparky joined our family [YEAR] when we adopted him from [RESCUE NAME].
-    He showed up with boundless energy, floppy ears, and absolutely zero interest in sitting still for photos.
+    Meet Sparky! He's a 6 year old mixed breed rescue pup that loves toys, treats, and adventuring.
+    When he's not busy contributing to scientific research, he's an active guy that likes playing frisbee and soccer.
+    Initially surrendered to OAS with his puppies, Sparky was adopted during a large dog adoption event two years ago
+    and now lives happily in Alameda with his parents, Dan and Zoe.
   </p>
   <p style="margin-bottom:1rem;">
-    We've always wondered what mix of breeds could produce such a perfectly chaotic dog,
-    so we finally sent off a DNA test. The results are sealed until the reveal — that's where you come in.
+    Sparky is an excellent road trip companion and has become quite a well-traveled pup, joining us on all sorts of
+    adventures through 6 states (so far!). This summer he'll go camping for the first time, and he is certainly
+    looking forward to spending some time at the river.
+  </p>
+  <p style="margin-bottom:1rem;">
+    His favorite hobbies include chewing up the biggest sticks he can find, sticking his head a bit too far out of
+    the car window, playing backyard fetch, and settling down for some cozy couch snuggles. He's a big guy, weighing
+    in over 100 lbs, but that's just because he has a lot of love to give (and sizable research samples).
+    He is loved by friends, family, and even the neighbors — and is an all around good boy!
   </p>
   <p>
+    We've always wondered what mix of breeds could produce such a perfectly chaotic dog,
+    so we finally sent off a DNA test. The results are sealed until the reveal — that's where you come in.
     The guest whose breed guess is closest to Sparky's actual DNA breakdown wins the pot.
     Good luck, and may the best amateur canine geneticist win.
   </p>
 </div>
 
-<div class="card" style="margin-bottom:1.25rem;">
-  <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">The Rules</h3>
-  <ul style="padding-left:1.25rem; line-height:2;">
-    <li>Entry fee: <strong>$1 per person</strong> (cash to Dan or [Partner's Name])</li>
-    <li>Select one or more breeds and assign a percentage to each</li>
-    <li>Your percentages must add up to exactly <strong>100%</strong></li>
-    <li>One entry per guest — no changes after you submit</li>
-    <li>Scoring: lowest total difference from the actual results wins</li>
-    <li>Ties broken by who submitted first</li>
-  </ul>
+{% if images %}
+<h2 class="section-title" style="margin-top:0.5rem;">Photos</h2>
+<p class="muted" style="margin-bottom:1rem;">Study him carefully. Every clue counts.</p>
+<div class="gallery-grid" style="margin-bottom:1.5rem;">
+  {% for img in images %}
+  <div class="gallery-item">
+    <img src="{{ url_for('main.gallery_img', filename=img.filename) }}"
+         alt="{{ img.caption or 'Sparky' }}" loading="lazy"
+         class="gallery-thumb"
+         data-caption="{{ img.caption or '' }}">
+    {% if img.caption %}
+    <div class="gallery-caption">{{ img.caption }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Lightbox ── #}
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">
+  <button id="lb-close" aria-label="Close">&times;</button>
+  <img id="lb-img" src="" alt="">
+  <div id="lb-caption"></div>
 </div>
 
-<div class="card">
-  <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">About Dan &amp; [Partner's Name]</h3>
-  <p>
-    <!-- TODO: Add couple bio -->
-    [Add a short bio about the couple here.]
-  </p>
-</div>
+<style>
+  .gallery-thumb { cursor: zoom-in; }
+
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 1.5rem;
+  }
+  #lightbox.open { display: flex; }
+
+  #lb-img {
+    max-width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  }
+
+  #lb-caption {
+    color: #fff;
+    font-size: 0.95rem;
+    margin-top: 1rem;
+    text-align: center;
+    opacity: 0.85;
+    max-width: 560px;
+  }
+
+  #lb-close {
+    position: fixed;
+    top: 1rem;
+    right: 1.25rem;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 0.25rem 0.5rem;
+  }
+  #lb-close:hover { opacity: 1; }
+</style>
+
+<script>
+  var lb      = document.getElementById('lightbox');
+  var lbImg   = document.getElementById('lb-img');
+  var lbCap   = document.getElementById('lb-caption');
+  var lbClose = document.getElementById('lb-close');
+
+  document.querySelectorAll('.gallery-thumb').forEach(function (img) {
+    img.addEventListener('click', function () {
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lbCap.textContent = img.dataset.caption || '';
+      lb.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    });
+  });
+
+  function closeLightbox() {
+    lb.classList.remove('open');
+    document.body.style.overflow = '';
+    lbImg.src = '';
+  }
+
+  lbClose.addEventListener('click', closeLightbox);
+  lb.addEventListener('click', function (e) {
+    if (e.target === lb) closeLightbox();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeLightbox();
+  });
+</script>
 {% endblock %}

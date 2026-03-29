@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block title %}Admin — Sparky's DNA Bet{% endblock %}
 
 {% block nav_brand_extra %}
 {% if not show_login %}<span class="admin-badge">Admin</span>{% endif %}
@@ -7,7 +8,9 @@
 {% block nav_links %}
 {% if not show_login %}
 <a href="#overview" class="nav-link admin-tab" data-tab="overview">Overview</a>
-<a href="#data"     class="nav-link admin-tab" data-tab="data">Data</a>
+<a href="#guests"   class="nav-link admin-tab" data-tab="guests">Guests</a>
+<a href="#results"  class="nav-link admin-tab" data-tab="results">Results</a>
+<a href="#gallery"  class="nav-link admin-tab" data-tab="gallery">Gallery</a>
 {% endif %}
 <form method="post" action="{{ url_for('main.admin_logout') }}" class="nav-sign-out-form">
   <button type="submit" class="nav-sign-out">Sign Out</button>
@@ -97,7 +100,7 @@
   <div class="card" style="margin-bottom:1.5rem;">
     <h3 class="admin-sh">Leaderboard</h3>
     {% if not has_actual %}
-    <div class="alert alert-info">Add actual DNA results in the Data tab to see scores.</div>
+    <div class="alert alert-info">Add actual DNA results in the Results tab to see scores.</div>
     {% elif leaderboard %}
       {% if not status.revealed %}
       <div class="alert alert-info" style="margin-bottom:0.75rem;">
@@ -154,16 +157,15 @@
 </div>{# /tab-overview #}
 
 {# ═══════════════════════════════════════════════ #}
-{# TAB: Data                                       #}
+{# TAB: Guests                                     #}
 {# ═══════════════════════════════════════════════ #}
-<div id="tab-data" class="admin-tab-panel">
+<div id="tab-guests" class="admin-tab-panel">
 
-  {# Guests #}
   <div class="card" style="margin-bottom:1.5rem;">
     <h3 class="admin-sh">Guests</h3>
     <table>
       <thead>
-        <tr><th>Name</th><th>PIN</th><th>Status</th><th>Submitted</th><th></th></tr>
+        <tr><th>Name</th><th>PIN</th><th>Status</th><th>Submitted</th><th style="text-align:right;"></th></tr>
       </thead>
       <tbody>
         {% for g in guests %}
@@ -178,20 +180,26 @@
             {% endif %}
           </td>
           <td class="muted" style="font-size:0.85rem;">{{ g.submitted_at or '—' }}</td>
-          <td style="white-space:nowrap;">
-            <button type="button" class="btn btn-secondary btn-sm"
-                    onclick="toggleRow('eg{{ g.id }}')">Edit</button>
+          <td style="white-space:nowrap; text-align:right;">
+            <button type="button" class="btn btn-secondary btn-sm btn-icon"
+                    title="Edit" onclick="toggleRow('eg{{ g.id }}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
             {% if g.has_submitted %}
             <form method="post" action="{{ url_for('main.admin_guests_reset_bet', guest_id=g.id) }}"
                   style="display:inline;"
                   onsubmit="return confirm('Reset bet for {{ g.name }}? They can then re-submit.')">
-              <button type="submit" class="btn btn-secondary btn-sm">Reset Bet</button>
+              <button type="submit" class="btn btn-secondary btn-sm btn-icon" title="Reset Bet">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.96"/></svg>
+              </button>
             </form>
             {% endif %}
             <form method="post" action="{{ url_for('main.admin_guests_delete', guest_id=g.id) }}"
                   style="display:inline;"
                   onsubmit="return confirm('Delete {{ g.name }} and all their bets?')">
-              <button type="submit" class="btn btn-danger btn-sm">Del</button>
+              <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </button>
             </form>
           </td>
         </tr>
@@ -224,17 +232,16 @@
     </details>
   </div>
 
-  {# Bets #}
   <div class="card" style="margin-bottom:1.5rem;">
     <h3 class="admin-sh">Submitted Bets</h3>
     <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
-      Delete a single row to remove one breed entry. Use "Reset Bet" in the Guests table above
-      to clear someone's full submission and let them re-submit.
+      Delete a single row to remove one breed entry. Use the reset icon on a guest above
+      to clear their full submission and let them re-submit.
     </p>
     {% if all_bets %}
     <table>
       <thead>
-        <tr><th>Guest</th><th>Breed</th><th style="text-align:right;">%</th><th>Time</th><th></th></tr>
+        <tr><th>Guest</th><th>Breed</th><th style="text-align:right;">%</th><th>Time</th><th style="text-align:right;"></th></tr>
       </thead>
       <tbody>
         {% for b in all_bets %}
@@ -243,10 +250,12 @@
           <td>{{ b.breed }}</td>
           <td style="text-align:right; font-weight:600;">{{ b.percentage }}%</td>
           <td class="muted" style="font-size:0.85rem;">{{ b.submitted_at or '—' }}</td>
-          <td>
+          <td style="text-align:right;">
             <form method="post" action="{{ url_for('main.admin_bets_delete', bet_id=b.id) }}"
                   onsubmit="return confirm('Delete this bet row?')">
-              <button type="submit" class="btn btn-danger btn-sm">Del</button>
+              <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </button>
             </form>
           </td>
         </tr>
@@ -258,128 +267,6 @@
     {% endif %}
   </div>
 
-  {# Actual Results #}
-  <div class="card" style="margin-bottom:1.5rem;">
-    <h3 class="admin-sh">Actual DNA Results</h3>
-    <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
-      Enter Sparky's real breed breakdown. Scores are computed against these values.
-    </p>
-    {% if actual_results %}
-    <table style="margin-bottom:1rem;">
-      <thead>
-        <tr><th>Breed</th><th style="text-align:right;">%</th><th></th></tr>
-      </thead>
-      <tbody>
-        {% for r in actual_results %}
-        <tr>
-          <td>{{ r.breed }}</td>
-          <td style="text-align:right; font-weight:600;">{{ r.actual_percentage }}%</td>
-          <td style="white-space:nowrap;">
-            <button type="button" class="btn btn-secondary btn-sm"
-                    onclick="toggleRow('ea{{ r.id }}')">Edit</button>
-            <form method="post" action="{{ url_for('main.admin_actual_delete', result_id=r.id) }}"
-                  style="display:inline;" onsubmit="return confirm('Delete this result?')">
-              <button type="submit" class="btn btn-danger btn-sm">Del</button>
-            </form>
-          </td>
-        </tr>
-        <tr id="ea{{ r.id }}" style="display:none; background:var(--primary-pale);">
-          <td colspan="3">
-            <form method="post" action="{{ url_for('main.admin_actual_edit', result_id=r.id) }}"
-                  class="inline-form">
-              <input type="text" name="breed" value="{{ r.breed }}" placeholder="Breed" required>
-              <input type="number" name="pct" value="{{ r.actual_percentage }}"
-                     placeholder="%" step="0.1" min="0" max="100" required style="width:75px;">
-              <button type="submit" class="btn btn-primary btn-sm">Save</button>
-              <button type="button" class="btn btn-secondary btn-sm"
-                      onclick="toggleRow('ea{{ r.id }}')">Cancel</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% endif %}
-    <details>
-      <summary class="btn btn-secondary btn-sm" style="display:inline-block; cursor:pointer;">
-        + Add Result
-      </summary>
-      <form method="post" action="{{ url_for('main.admin_actual_add') }}" class="inline-form"
-            style="margin-top:0.75rem;">
-        <input type="text" name="breed" placeholder="Breed name" required>
-        <input type="number" name="pct" placeholder="%" step="0.1" min="0" max="100"
-               required style="width:75px;">
-        <button type="submit" class="btn btn-primary btn-sm">Add</button>
-      </form>
-    </details>
-  </div>
-
-  {# Gallery #}
-  <div class="card" style="margin-bottom:1.5rem;">
-    <h3 class="admin-sh">Gallery Photos</h3>
-    <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
-      Images are stored on the server. To replace a photo, delete it and re-upload.
-      Lower sort order = appears first.
-    </p>
-    {% if gallery %}
-    <table style="margin-bottom:1rem;">
-      <thead>
-        <tr><th>File</th><th>Caption</th><th>Order</th><th></th></tr>
-      </thead>
-      <tbody>
-        {% for img in gallery %}
-        <tr>
-          <td style="font-size:0.8rem; max-width:120px;
-                     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-            {{ img.filename }}
-          </td>
-          <td>{{ img.caption or '—' }}</td>
-          <td>{{ img.sort_order }}</td>
-          <td style="white-space:nowrap;">
-            <button type="button" class="btn btn-secondary btn-sm"
-                    onclick="toggleRow('egi{{ img.id }}')">Edit</button>
-            <form method="post" action="{{ url_for('main.admin_gallery_delete', image_id=img.id) }}"
-                  style="display:inline;" onsubmit="return confirm('Delete this photo?')">
-              <button type="submit" class="btn btn-danger btn-sm">Del</button>
-            </form>
-          </td>
-        </tr>
-        <tr id="egi{{ img.id }}" style="display:none; background:var(--primary-pale);">
-          <td colspan="4">
-            <form method="post" action="{{ url_for('main.admin_gallery_edit', image_id=img.id) }}"
-                  class="inline-form">
-              <input type="text" name="caption" value="{{ img.caption }}" placeholder="Caption"
-                     style="flex:2;">
-              <input type="number" name="sort_order" value="{{ img.sort_order }}"
-                     placeholder="Order" style="width:60px;">
-              <button type="submit" class="btn btn-primary btn-sm">Save</button>
-              <button type="button" class="btn btn-secondary btn-sm"
-                      onclick="toggleRow('egi{{ img.id }}')">Cancel</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% endif %}
-    <details>
-      <summary class="btn btn-secondary btn-sm" style="display:inline-block; cursor:pointer;">
-        + Upload Photo
-      </summary>
-      <form method="post" action="{{ url_for('main.admin_gallery_upload') }}"
-            enctype="multipart/form-data" style="margin-top:0.75rem;">
-        <div class="inline-form">
-          <input type="file" name="image" accept="image/*" required
-                 style="flex:2; min-width:0; padding:0.4rem;">
-          <input type="text" name="caption" placeholder="Caption" style="flex:1;">
-          <input type="number" name="sort_order" placeholder="Order" value="0" style="width:60px;">
-          <button type="submit" class="btn btn-primary btn-sm">Upload</button>
-        </div>
-      </form>
-    </details>
-  </div>
-
-  {# Danger Zone #}
   <div class="card danger-zone" style="margin-bottom:2rem;">
     <h3 class="admin-sh" style="color:#c0392b;">⚠ Danger Zone</h3>
     <strong>Wipe All Bets</strong>
@@ -409,7 +296,214 @@
     </div>
   </div>
 
-</div>{# /tab-data #}
+</div>{# /tab-guests #}
+
+{# ═══════════════════════════════════════════════ #}
+{# TAB: Results                                    #}
+{# ═══════════════════════════════════════════════ #}
+<div id="tab-results" class="admin-tab-panel">
+
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 class="admin-sh">Actual DNA Results</h3>
+    <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
+      Enter Sparky's real breed breakdown. Scores are computed against these values.
+    </p>
+    {% if actual_results %}
+    <table style="margin-bottom:1rem;">
+      <thead>
+        <tr><th>Breed</th><th style="text-align:right;">%</th><th style="text-align:right;"></th></tr>
+      </thead>
+      <tbody>
+        {% for r in actual_results %}
+        <tr>
+          <td>{{ r.breed }}</td>
+          <td style="text-align:right; font-weight:600;">{{ r.actual_percentage | int }}%</td>
+          <td style="white-space:nowrap; text-align:right;">
+            <button type="button" class="btn btn-secondary btn-sm btn-icon"
+                    title="Edit" onclick="toggleRow('ea{{ r.id }}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <form method="post" action="{{ url_for('main.admin_actual_delete', result_id=r.id) }}"
+                  style="display:inline;" onsubmit="return confirm('Delete this result?')">
+              <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+        <tr id="ea{{ r.id }}" style="display:none; background:var(--primary-pale);">
+          <td colspan="3">
+            <form method="post" action="{{ url_for('main.admin_actual_edit', result_id=r.id) }}"
+                  class="inline-form">
+              <input type="text" name="breed" value="{{ r.breed }}" placeholder="Breed"
+                     list="breed-list" autocomplete="off" required>
+              <input type="number" name="pct" value="{{ r.actual_percentage | int }}"
+                     placeholder="%" step="1" min="0" max="100" required style="width:75px;">
+              <button type="submit" class="btn btn-primary btn-sm">Save</button>
+              <button type="button" class="btn btn-secondary btn-sm"
+                      onclick="toggleRow('ea{{ r.id }}')">Cancel</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    <details>
+      <summary class="btn btn-secondary btn-sm" style="display:inline-block; cursor:pointer;">
+        + Add Result
+      </summary>
+      <form method="post" action="{{ url_for('main.admin_actual_add') }}" class="inline-form"
+            style="margin-top:0.75rem;">
+        <input type="text" name="breed" placeholder="Breed name"
+               list="breed-list" autocomplete="off" required>
+        <input type="number" name="pct" placeholder="%" step="1" min="0" max="100"
+               required style="width:75px;">
+        <button type="submit" class="btn btn-primary btn-sm">Add</button>
+      </form>
+    </details>
+  </div>
+
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 class="admin-sh">Breed List</h3>
+    <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
+      These appear as options on the bet form. Add entries to match DNA report categories
+      (e.g. "Mastiff and Bull-Type Lineage").
+    </p>
+    {% if all_breeds %}
+    <table style="margin-bottom:1rem;">
+      <thead>
+        <tr><th>Breed</th><th style="text-align:right;"></th></tr>
+      </thead>
+      <tbody>
+        {% for b in all_breeds %}
+        <tr>
+          <td>{{ b.breed_name }}</td>
+          <td style="text-align:right; white-space:nowrap;">
+            <button type="button" class="btn btn-secondary btn-sm btn-icon"
+                    title="Edit" onclick="toggleRow('eb{{ b.id }}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <form method="post" action="{{ url_for('main.admin_breeds_delete', breed_id=b.id) }}"
+                  style="display:inline;" onsubmit="return confirm('Delete {{ b.breed_name }}?')">
+              <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+        <tr id="eb{{ b.id }}" style="display:none; background:var(--primary-pale);">
+          <td colspan="2">
+            <form method="post" action="{{ url_for('main.admin_breeds_edit', breed_id=b.id) }}"
+                  class="inline-form">
+              <input type="text" name="breed_name" value="{{ b.breed_name }}" required>
+              <button type="submit" class="btn btn-primary btn-sm">Save</button>
+              <button type="button" class="btn btn-secondary btn-sm"
+                      onclick="toggleRow('eb{{ b.id }}')">Cancel</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    <details>
+      <summary class="btn btn-secondary btn-sm" style="display:inline-block; cursor:pointer;">
+        + Add Breed
+      </summary>
+      <form method="post" action="{{ url_for('main.admin_breeds_add') }}" class="inline-form"
+            style="margin-top:0.75rem;">
+        <input type="text" name="breed_name" placeholder="Breed name" required>
+        <button type="submit" class="btn btn-primary btn-sm">Add</button>
+      </form>
+    </details>
+  </div>
+
+  <datalist id="breed-list">
+    {% for b in breeds %}<option value="{{ b }}">{% endfor %}
+  </datalist>
+
+</div>{# /tab-results #}
+
+{# ═══════════════════════════════════════════════ #}
+{# TAB: Gallery                                    #}
+{# ═══════════════════════════════════════════════ #}
+<div id="tab-gallery" class="admin-tab-panel">
+
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 class="admin-sh">Gallery Photos</h3>
+    <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
+      Images are stored on the server. To replace a photo, delete it and re-upload.
+      Lower sort order = appears first.
+    </p>
+    {% if gallery %}
+    <table style="margin-bottom:1rem;">
+      <thead>
+        <tr><th></th><th>Caption</th><th>Order</th><th style="text-align:right;"></th></tr>
+      </thead>
+      <tbody>
+        {% for img in gallery %}
+        <tr>
+          <td style="width:64px;">
+            <a href="{{ url_for('main.gallery_img', filename=img.filename) }}" target="_blank">
+              <img src="{{ url_for('main.gallery_img', filename=img.filename) }}"
+                   alt="{{ img.caption or img.filename }}" loading="lazy"
+                   style="width:56px; height:56px; object-fit:cover; border-radius:6px;
+                          border:1px solid var(--border); display:block;">
+            </a>
+          </td>
+          <td>{{ img.caption or '—' }}</td>
+          <td>{{ img.sort_order }}</td>
+          <td style="white-space:nowrap; text-align:right;">
+            <button type="button" class="btn btn-secondary btn-sm btn-icon"
+                    title="Edit" onclick="toggleRow('egi{{ img.id }}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <form method="post" action="{{ url_for('main.admin_gallery_delete', image_id=img.id) }}"
+                  style="display:inline;" onsubmit="return confirm('Delete this photo?')">
+              <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+        <tr id="egi{{ img.id }}" style="display:none; background:var(--primary-pale);">
+          <td colspan="4">
+            <form method="post" action="{{ url_for('main.admin_gallery_edit', image_id=img.id) }}"
+                  class="inline-form">
+              <textarea name="caption" placeholder="Caption"
+                        style="flex:2; resize:vertical; min-height:2.4rem;">{{ img.caption }}</textarea>
+              <input type="number" name="sort_order" value="{{ img.sort_order }}"
+                     placeholder="Order" style="width:60px;">
+              <button type="submit" class="btn btn-primary btn-sm">Save</button>
+              <button type="button" class="btn btn-secondary btn-sm"
+                      onclick="toggleRow('egi{{ img.id }}')">Cancel</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    <details>
+      <summary class="btn btn-secondary btn-sm" style="display:inline-block; cursor:pointer;">
+        + Upload Photo
+      </summary>
+      <form method="post" action="{{ url_for('main.admin_gallery_upload') }}"
+            enctype="multipart/form-data" style="margin-top:0.75rem;">
+        <div class="inline-form" style="margin-bottom:0.5rem;">
+          <input type="file" name="image" accept="image/*" required
+                 style="flex:2; min-width:0; padding:0.4rem;">
+          <input type="number" name="sort_order" placeholder="Order" value="0" style="width:60px;">
+          <button type="submit" class="btn btn-primary btn-sm">Upload</button>
+        </div>
+        <textarea name="caption" placeholder="Caption (optional)"
+                  style="width:100%; resize:vertical; min-height:3rem;"></textarea>
+      </form>
+    </details>
+  </div>
+
+</div>{# /tab-gallery #}
 
 <script>
   function toggleRow(id) {
@@ -432,30 +526,63 @@
       });
     }
 
-    // Read hash on load; default to overview
     var initial = (window.location.hash || '#overview').replace('#', '');
     showTab(initial);
 
-    // Update on hash change (back/forward)
     window.addEventListener('hashchange', function () {
       showTab(window.location.hash.replace('#', '') || 'overview');
     });
 
-    // Store hash before any form POST so the redirect lands on the same tab
-    document.querySelectorAll('form[method=post]').forEach(function (form) {
-      form.addEventListener('submit', function () {
-        var active = document.querySelector('.admin-tab.active');
-        if (active) sessionStorage.setItem('adminTab', active.dataset.tab);
-      });
-    });
-
-    // Restore tab after a POST-redirect
     var saved = sessionStorage.getItem('adminTab');
     if (saved) {
       sessionStorage.removeItem('adminTab');
       showTab(saved);
       history.replaceState(null, '', '#' + saved);
     }
+  })();
+
+  // ── Background form submission ────────────────────────────
+  (function () {
+    var panelIds = ['tab-overview', 'tab-guests', 'tab-results', 'tab-gallery'];
+
+    function refreshPanels(html) {
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      panelIds.forEach(function (id) {
+        var fresh   = doc.getElementById(id);
+        var current = document.getElementById(id);
+        if (!fresh || !current) return;
+        var display = current.style.display;
+        current.innerHTML = fresh.innerHTML;
+        current.style.display = display;
+      });
+    }
+
+    document.addEventListener('submit', function (e) {
+      var form   = e.target;
+      var action = form.action || '';
+      if (e.defaultPrevented) return;
+      if (form.method.toLowerCase() !== 'post') return;
+      if (!action.includes('/admin')) return;
+      if (action.includes('/admin/login') || action.includes('/admin/logout')) return;
+      if (form.querySelector('input[type=file]')) {
+        var active = document.querySelector('.admin-tab.active');
+        if (active) sessionStorage.setItem('adminTab', active.dataset.tab);
+        return;
+      }
+
+      e.preventDefault();
+      var btn = form.querySelector('[type=submit]');
+      if (btn) btn.disabled = true;
+
+      fetch(action, { method: 'POST', body: new FormData(form), redirect: 'follow' })
+        .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
+        .then(function (html) { refreshPanels(html); })
+        .catch(function () {
+          var active = document.querySelector('.admin-tab.active');
+          if (active) sessionStorage.setItem('adminTab', active.dataset.tab);
+          form.submit();
+        });
+    });
   })();
 </script>
 
@@ -465,6 +592,8 @@
     letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.75rem;
   }
   .btn-sm { font-size: 0.8rem; padding: 0.28rem 0.6rem; }
+  .btn-icon { padding: 0.28rem 0.45rem; line-height: 1; }
+  .btn-icon svg { display: block; }
   .inline-form {
     display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; padding: 0.4rem 0;
   }

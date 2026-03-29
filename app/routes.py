@@ -25,7 +25,7 @@ def _require_admin():
 
 @bp.route('/gallery-img/<filename>')
 def gallery_img(filename):
-    return send_from_directory(db._gallery_dir(), filename)
+    return send_from_directory(db._gallery_dir(), filename, max_age=3600)
 
 
 # ── Public pages ──────────────────────────────────────────────
@@ -42,7 +42,7 @@ def gallery():
 
 @bp.route('/about')
 def about():
-    return render_template('about.html')
+    return render_template('about.html', images=db.get_gallery_images())
 
 
 # ── Bet / My Bet (single page) ────────────────────────────────
@@ -155,7 +155,9 @@ def admin():
         has_actual=bool(db.get_actual_results()),
         all_bets=db.get_all_bets(),
         actual_results=db.get_all_actual_results(),
-        gallery=db.get_all_gallery())
+        gallery=db.get_all_gallery(),
+        breeds=db.get_breeds(),
+        all_breeds=db.get_all_breeds())
 
 
 @bp.route('/admin/login', methods=['POST'])
@@ -241,6 +243,33 @@ def admin_wipe_all_bets():
     return redirect(url_for('main.admin'))
 
 
+# ── Admin: Breed CRUD ────────────────────────────────────────
+
+@bp.route('/admin/breeds/add', methods=['POST'])
+def admin_breeds_add():
+    if denied := _require_admin(): return denied
+    name = request.form.get('breed_name', '').strip()
+    if name:
+        db.add_breed(name)
+    return redirect(url_for('main.admin'))
+
+
+@bp.route('/admin/breeds/<int:breed_id>/edit', methods=['POST'])
+def admin_breeds_edit(breed_id):
+    if denied := _require_admin(): return denied
+    name = request.form.get('breed_name', '').strip()
+    if name:
+        db.update_breed(breed_id, name)
+    return redirect(url_for('main.admin'))
+
+
+@bp.route('/admin/breeds/<int:breed_id>/delete', methods=['POST'])
+def admin_breeds_delete(breed_id):
+    if denied := _require_admin(): return denied
+    db.delete_breed(breed_id)
+    return redirect(url_for('main.admin'))
+
+
 # ── Admin: Actual Results CRUD ────────────────────────────────
 
 @bp.route('/admin/actual/add', methods=['POST'])
@@ -250,7 +279,7 @@ def admin_actual_add():
     pct   = request.form.get('pct', '').strip()
     if breed and pct:
         try:
-            db.upsert_actual_result(breed, float(pct))
+            db.upsert_actual_result(breed, int(float(pct)))
         except ValueError:
             pass
     return redirect(url_for('main.admin'))
@@ -264,7 +293,7 @@ def admin_actual_edit(result_id):
     if breed and pct:
         try:
             db.delete_actual_result(result_id)
-            db.upsert_actual_result(breed, float(pct))
+            db.upsert_actual_result(breed, int(float(pct)))
         except ValueError:
             pass
     return redirect(url_for('main.admin'))

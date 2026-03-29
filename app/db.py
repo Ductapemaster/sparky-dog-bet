@@ -8,6 +8,7 @@ Uses Python's built-in sqlite3 — no additional dependencies required.
 import os
 import sqlite3
 import threading
+from contextlib import contextmanager
 from datetime import datetime
 
 _submit_lock = threading.Lock()
@@ -17,12 +18,20 @@ def _db_path():
     return os.environ.get('DB_PATH', 'data/sparky.db')
 
 
+@contextmanager
 def _get_db():
     conn = sqlite3.connect(_db_path())
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
-    return conn
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def init_db():
@@ -229,6 +238,27 @@ def get_breeds():
     with _get_db() as conn:
         rows = conn.execute("SELECT breed_name FROM breeds ORDER BY breed_name").fetchall()
         return [r['breed_name'] for r in rows]
+
+
+def get_all_breeds():
+    with _get_db() as conn:
+        rows = conn.execute("SELECT id, breed_name FROM breeds ORDER BY breed_name").fetchall()
+        return [dict(r) for r in rows]
+
+
+def add_breed(breed_name):
+    with _get_db() as conn:
+        conn.execute("INSERT OR IGNORE INTO breeds (breed_name) VALUES (?)", (breed_name,))
+
+
+def update_breed(breed_id, breed_name):
+    with _get_db() as conn:
+        conn.execute("UPDATE breeds SET breed_name=? WHERE id=?", (breed_name, breed_id))
+
+
+def delete_breed(breed_id):
+    with _get_db() as conn:
+        conn.execute("DELETE FROM breeds WHERE id=?", (breed_id,))
 
 
 def get_gallery_images():
