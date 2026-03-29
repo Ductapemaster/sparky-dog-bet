@@ -1,9 +1,15 @@
 import os
+from itertools import groupby
 from flask import Blueprint, render_template, request, session, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
 from . import db, scoring
 
 bp = Blueprint('main', __name__)
+
+
+@bp.app_context_processor
+def inject_nav_status():
+    return dict(nav_status=_status())
 
 
 def _status():
@@ -45,6 +51,16 @@ def about():
     return render_template('about.html', images=db.get_gallery_images())
 
 
+@bp.route('/leaderboard')
+def leaderboard():
+    status = _status()
+    lb = scoring.get_leaderboard() if status['revealed'] else []
+    for entry in lb:
+        entry['bets'] = db.get_bet(entry['name'])
+    return render_template('leaderboard.html',
+        leaderboard=lb, actual=db.get_actual_results(), status=status)
+
+
 # ── Bet / My Bet (single page) ────────────────────────────────
 
 @bp.route('/bet')
@@ -69,6 +85,8 @@ def bet():
                     return render_template('bet.html',
                         show_submitted=True, guest=guest, bet=[],
                         leaderboard=scoring.get_leaderboard() if status['revealed'] else None,
+                        actual_results=db.get_actual_results() if status['revealed'] else None,
+                        score=None,
                         status=status)
             else:
                 # Normal path — bet rows exist, refresh submitted_at if missing
@@ -83,9 +101,17 @@ def bet():
                     show_submitted=True, guest=guest,
                     bet=bet_rows,
                     leaderboard=scoring.get_leaderboard() if status['revealed'] else None,
+                    actual_results=db.get_actual_results() if status['revealed'] else None,
+                    score=scoring.calculate_score(guest['name']) if status['revealed'] else None,
                     status=status)
         if status['locked']:
-            return render_template('bet.html', locked=True, guest=guest, status=status)
+            locked_bet = db.get_bet(guest['name'])
+            return render_template('bet.html', locked=True, guest=guest,
+                bet=locked_bet,
+                leaderboard=scoring.get_leaderboard() if status['revealed'] else None,
+                actual_results=db.get_actual_results() if status['revealed'] and locked_bet else None,
+                score=scoring.calculate_score(guest['name']) if status['revealed'] and locked_bet else None,
+                status=status)
         return render_template('bet.html',
             show_form=True, guest=guest,
             breeds=db.get_breeds(), status=status)
@@ -148,12 +174,31 @@ def admin():
     guests    = db.get_all_guests()
     submitted = sum(1 for g in guests if g['has_submitted'])
 
+    lb = scoring.get_leaderboard()
+    for entry in lb:
+        entry['bets'] = db.get_bet(entry['name'])
+    actual = db.get_actual_results()
+
+    all_bets_raw = db.get_all_bets()
+    guests_by_name = {g['name']: g for g in guests}
+    grouped_bets = []
+    for guest_name, group in groupby(all_bets_raw, key=lambda b: b['guest_name']):
+        bets_list = list(group)
+        g_info = guests_by_name.get(guest_name, {})
+        grouped_bets.append({
+            'guest_name': guest_name,
+            'guest_id':   g_info.get('id'),
+            'bets':       bets_list,
+        })
+
     return render_template('admin.html',
         status=status, guests=guests,
         submitted=submitted, total=len(guests),
-        leaderboard=scoring.get_leaderboard(),
-        has_actual=bool(db.get_actual_results()),
-        all_bets=db.get_all_bets(),
+        leaderboard=lb,
+        has_actual=bool(actual),
+        actual=actual,
+        grouped_bets=grouped_bets,
+        all_bets=all_bets_raw,
         actual_results=db.get_all_actual_results(),
         gallery=db.get_all_gallery(),
         breeds=db.get_breeds(),
@@ -228,6 +273,27 @@ def admin_guests_reset_bet(guest_id):
 
 
 # ── Admin: Bet CRUD ───────────────────────────────────────────
+
+@bp.route('/admin/bets/add', methods=['POST'])
+def admin_bets_add():
+    if denied := _require_admin(): return denied
+    guest_name = request.form.get('guest_name', '').strip()
+    breed      = request.form.get('breed', '').strip()
+    pct        = request.form.get('percentage', '').strip()
+    if guest_name and breed and pct:
+        db.add_bet_row(guest_name, breed, int(float(pct)))
+    return redirect(url_for('main.admin'))
+
+
+@bp.route('/admin/bets/<int:bet_id>/edit', methods=['POST'])
+def admin_bets_edit(bet_id):
+    if denied := _require_admin(): return denied
+    breed = request.form.get('breed', '').strip()
+    pct   = request.form.get('percentage', '').strip()
+    if breed and pct:
+        db.update_bet(bet_id, breed, int(float(pct)))
+    return redirect(url_for('main.admin'))
+
 
 @bp.route('/admin/bets/<int:bet_id>/delete', methods=['POST'])
 def admin_bets_delete(bet_id):

@@ -9,6 +9,7 @@
 {% if not show_login %}
 <a href="#overview" class="nav-link admin-tab" data-tab="overview">Overview</a>
 <a href="#guests"   class="nav-link admin-tab" data-tab="guests">Guests</a>
+<a href="#bets"     class="nav-link admin-tab" data-tab="bets">Bets</a>
 <a href="#results"  class="nav-link admin-tab" data-tab="results">Results</a>
 <a href="#gallery"  class="nav-link admin-tab" data-tab="gallery">Gallery</a>
 {% endif %}
@@ -79,19 +80,8 @@
         <span>Reveal leaderboard to guests</span>
       </div>
       <form method="post" action="{{ url_for('main.admin_toggle', key='ResultsRevealed') }}">
-        <button type="submit" class="btn btn-secondary">
+        <button type="submit" class="btn {{ 'btn-danger' if status.revealed else 'btn-secondary' }}">
           {{ 'Hide Results' if status.revealed else 'Reveal Results' }}
-        </button>
-      </form>
-    </div>
-    <div class="toggle-row">
-      <div class="toggle-info">
-        <strong>PIN Verification</strong>
-        <span>Require last-4 phone digits</span>
-      </div>
-      <form method="post" action="{{ url_for('main.admin_toggle', key='RequirePin') }}">
-        <button type="submit" class="btn btn-secondary">
-          {{ 'Disable PIN' if status.require_pin else 'Enable PIN' }}
         </button>
       </form>
     </div>
@@ -107,17 +97,52 @@
         Results are hidden from guests. Click "Reveal Results" above to show them.
       </div>
       {% endif %}
+      <p class="muted" style="font-size:0.85rem; margin-bottom:1rem;">Tap any row to see that person's full guess breakdown.</p>
       <table>
         <thead>
           <tr><th>#</th><th>Name</th><th style="text-align:right;">Score</th><th>Submitted</th></tr>
         </thead>
         <tbody>
           {% for entry in leaderboard %}
-          <tr>
-            <td class="rank">{{ loop.index }}{{ ' 🏆' if loop.first }}</td>
+          <tr style="cursor:pointer;" onclick="toggleAdminRow({{ loop.index }})">
+            <td class="rank" style="white-space:nowrap;">{{ loop.index }}{% if loop.first %} 🏆{% elif loop.last and leaderboard|length > 1 %} 💩{% endif %}</td>
             <td>{{ entry.name }}</td>
             <td style="text-align:right;">{{ entry.score }}</td>
             <td class="muted" style="font-size:0.85rem;">{{ entry.submitted_at or '—' }}</td>
+          </tr>
+          <tr id="alb-{{ loop.index }}" style="display:none;">
+            <td colspan="4" style="padding:0; border-top:none;">
+              <div style="background:var(--primary-pale); padding:0.75rem 1rem;">
+                <table style="width:100%; font-size:0.85rem;">
+                  <thead>
+                    <tr>
+                      <th style="padding-bottom:0.4rem;">Breed</th>
+                      <th style="text-align:right; padding-bottom:0.4rem;">Guess</th>
+                      <th style="text-align:right; padding-bottom:0.4rem;">Actual</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% set guessed = entry.bets | map(attribute='breed') | list %}
+                    {% for b in entry.bets %}
+                    <tr>
+                      <td>{{ b.breed }}</td>
+                      <td style="text-align:right;">{{ b.percentage }}%</td>
+                      <td style="text-align:right;">{{ actual.get(b.breed, 0) | int }}%</td>
+                    </tr>
+                    {% endfor %}
+                    {% for breed, pct in actual.items() %}
+                    {% if breed not in guessed %}
+                    <tr>
+                      <td style="color:var(--muted);">{{ breed }}</td>
+                      <td style="text-align:right; color:var(--muted);">—</td>
+                      <td style="text-align:right;">{{ pct | int }}%</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -185,15 +210,6 @@
                     title="Edit" onclick="toggleRow('eg{{ g.id }}')">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
-            {% if g.has_submitted %}
-            <form method="post" action="{{ url_for('main.admin_guests_reset_bet', guest_id=g.id) }}"
-                  style="display:inline;"
-                  onsubmit="return confirm('Reset bet for {{ g.name }}? They can then re-submit.')">
-              <button type="submit" class="btn btn-secondary btn-sm btn-icon" title="Reset Bet">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.96"/></svg>
-              </button>
-            </form>
-            {% endif %}
             <form method="post" action="{{ url_for('main.admin_guests_delete', guest_id=g.id) }}"
                   style="display:inline;"
                   onsubmit="return confirm('Delete {{ g.name }} and all their bets?')">
@@ -232,36 +248,108 @@
     </details>
   </div>
 
+</div>{# /tab-guests #}
+
+{# ═══════════════════════════════════════════════ #}
+{# TAB: Bets                                       #}
+{# ═══════════════════════════════════════════════ #}
+<div id="tab-bets" class="admin-tab-panel">
+
   <div class="card" style="margin-bottom:1.5rem;">
     <h3 class="admin-sh">Submitted Bets</h3>
-    <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
-      Delete a single row to remove one breed entry. Use the reset icon on a guest above
-      to clear their full submission and let them re-submit.
-    </p>
-    {% if all_bets %}
-    <table>
-      <thead>
-        <tr><th>Guest</th><th>Breed</th><th style="text-align:right;">%</th><th>Time</th><th style="text-align:right;"></th></tr>
-      </thead>
-      <tbody>
-        {% for b in all_bets %}
-        <tr>
-          <td>{{ b.guest_name }}</td>
-          <td>{{ b.breed }}</td>
-          <td style="text-align:right; font-weight:600;">{{ b.percentage }}%</td>
-          <td class="muted" style="font-size:0.85rem;">{{ b.submitted_at or '—' }}</td>
-          <td style="text-align:right;">
-            <form method="post" action="{{ url_for('main.admin_bets_delete', bet_id=b.id) }}"
-                  onsubmit="return confirm('Delete this bet row?')">
-              <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-              </button>
+    {% if grouped_bets %}
+    {% for group in grouped_bets %}
+    <div style="border:1px solid var(--border); border-radius:var(--radius); margin-bottom:0.5rem; overflow:hidden;">
+      {# ── Collapsible header ── #}
+      <div style="display:flex; justify-content:space-between; align-items:center;
+                  padding:0.55rem 0.75rem; cursor:pointer; background:var(--card);"
+           onclick="toggleBetGroup({{ loop.index }})">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <span id="bgchev-{{ loop.index }}" style="font-size:0.7rem; color:var(--muted);">▶</span>
+          <strong>{{ group.guest_name }}</strong>
+          <span class="muted" style="font-size:0.8rem;">{{ group.bets|length }} breed{{ 's' if group.bets|length != 1 }}</span>
+        </div>
+        {% if group.guest_id %}
+        <div onclick="event.stopPropagation();">
+          <form method="post" action="{{ url_for('main.admin_guests_reset_bet', guest_id=group.guest_id) }}"
+                style="display:inline;"
+                onsubmit="return confirm('Wipe all bets for {{ group.guest_name }}? They can re-submit.')">
+            <button type="submit" class="btn btn-warning btn-sm btn-icon" title="Wipe bets">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.96"/></svg>
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+      {# ── Collapsible body ── #}
+      <div id="bgbody-{{ loop.index }}" style="display:none; border-top:1px solid var(--border);">
+        <table style="margin:0;">
+          <thead>
+            <tr><th>Breed</th><th style="text-align:right;">%</th><th style="text-align:right;"></th></tr>
+          </thead>
+          <tbody>
+            {% for b in group.bets %}
+            <tr>
+              <td>{{ b.breed }}</td>
+              <td style="text-align:right; font-weight:600;">{{ b.percentage }}%</td>
+              <td style="text-align:right; white-space:nowrap;">
+                <button type="button" class="btn btn-secondary btn-sm btn-icon" title="Edit"
+                        onclick="toggleBetEdit({{ b.id }})">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <form method="post" action="{{ url_for('main.admin_bets_delete', bet_id=b.id) }}"
+                      style="display:inline;" onsubmit="return confirm('Delete this bet row?')">
+                  <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            <tr id="bet-edit-{{ b.id }}" style="display:none; background:var(--primary-pale);">
+              <td colspan="3" style="padding:0.6rem 0.75rem;">
+                <form method="post" action="{{ url_for('main.admin_bets_edit', bet_id=b.id) }}"
+                      style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                  <select name="breed" required style="flex:1; min-width:160px;">
+                    {% for breed in breeds %}
+                    <option value="{{ breed }}" {{ 'selected' if breed == b.breed }}>{{ breed }}</option>
+                    {% endfor %}
+                  </select>
+                  <input type="number" name="percentage" value="{{ b.percentage }}"
+                         min="1" max="100" required style="width:5rem;">
+                  <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                  <button type="button" class="btn btn-secondary btn-sm"
+                          onclick="toggleBetEdit({{ b.id }})">Cancel</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {# ── Add breed row ── #}
+        <div style="padding:0.5rem 0.75rem; border-top:1px solid var(--border); background:var(--bg);">
+          <button type="button" class="btn btn-secondary btn-sm"
+                  onclick="toggleAddBreed({{ loop.index }})">+ Add Breed</button>
+          <div id="bgadd-{{ loop.index }}" style="display:none; margin-top:0.5rem;">
+            <form method="post" action="{{ url_for('main.admin_bets_add') }}"
+                  style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+              <input type="hidden" name="guest_name" value="{{ group.guest_name }}">
+              <select name="breed" required style="flex:1; min-width:160px;">
+                <option value="">— Select breed —</option>
+                {% for breed in breeds %}
+                <option value="{{ breed }}">{{ breed }}</option>
+                {% endfor %}
+              </select>
+              <input type="number" name="percentage" placeholder="%" min="1" max="100"
+                     required style="width:5rem;">
+              <button type="submit" class="btn btn-primary btn-sm">Add</button>
+              <button type="button" class="btn btn-secondary btn-sm"
+                      onclick="toggleAddBreed({{ loop.index }})">Cancel</button>
             </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
     {% else %}
     <p class="muted">No bets submitted yet.</p>
     {% endif %}
@@ -296,7 +384,7 @@
     </div>
   </div>
 
-</div>{# /tab-guests #}
+</div>{# /tab-bets #}
 
 {# ═══════════════════════════════════════════════ #}
 {# TAB: Results                                    #}
@@ -541,9 +629,32 @@
     }
   })();
 
+  function toggleAdminRow(i) {
+    var row = document.getElementById('alb-' + i);
+    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+  }
+
+  function toggleBetEdit(id) {
+    var row = document.getElementById('bet-edit-' + id);
+    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+  }
+
+  function toggleBetGroup(i) {
+    var body = document.getElementById('bgbody-' + i);
+    var chev = document.getElementById('bgchev-' + i);
+    var open = body.style.display === 'none';
+    body.style.display = open ? 'block' : 'none';
+    if (chev) chev.textContent = open ? '▼' : '▶';
+  }
+
+  function toggleAddBreed(i) {
+    var el = document.getElementById('bgadd-' + i);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+
   // ── Background form submission ────────────────────────────
   (function () {
-    var panelIds = ['tab-overview', 'tab-guests', 'tab-results', 'tab-gallery'];
+    var panelIds = ['tab-overview', 'tab-guests', 'tab-bets', 'tab-results', 'tab-gallery'];
 
     function refreshPanels(html) {
       var doc = new DOMParser().parseFromString(html, 'text/html');

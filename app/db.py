@@ -333,6 +333,23 @@ def get_all_bets():
         ]
 
 
+def add_bet_row(guest_name, breed, percentage):
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    with _get_db() as conn:
+        conn.execute(
+            "INSERT INTO bets (guest_name, breed, percentage, submitted_at) VALUES (?, ?, ?, ?)",
+            (str(guest_name).strip(), str(breed).strip(), int(percentage), now)
+        )
+
+
+def update_bet(bet_id, breed, percentage):
+    with _get_db() as conn:
+        conn.execute(
+            "UPDATE bets SET breed = ?, percentage = ? WHERE id = ?",
+            (str(breed).strip(), int(percentage), int(bet_id))
+        )
+
+
 def delete_bet(bet_id):
     with _get_db() as conn:
         conn.execute("DELETE FROM bets WHERE id = ?", (bet_id,))

@@ -14,7 +14,9 @@
       <a href="{{ url_for('main.about') }}"
          class="nav-link {{ 'active' if request.endpoint in ('main.about','main.gallery') }}">About Sparky</a>
       <a href="{{ url_for('main.bet') }}"
-         class="nav-link {{ 'active' if request.endpoint in ('main.bet','main.bet_verify','main.bet_submit') }}">Place My Bet</a>
+         class="nav-link {{ 'active' if request.endpoint in ('main.bet','main.bet_verify','main.bet_submit') }}">{% if nav_status.locked %}🔒 {% endif %}Place My Bet</a>
+      <a href="{{ url_for('main.leaderboard') }}"
+         class="nav-link {{ 'active' if request.endpoint == 'main.leaderboard' }}">Leaderboard</a>
       {% endblock %}
     </div>
   </nav>

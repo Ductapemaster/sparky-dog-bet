@@ -163,6 +163,8 @@
   .btn-secondary:hover:not(:disabled) { background: #d5e8d9; }
   .btn-danger { background: #fdf0f0; color: var(--error-text); }
   .btn-danger:hover:not(:disabled) { background: #f9d9d9; }
+  .btn-warning { background: #fef9e7; color: #b45309; }
+  .btn-warning:hover:not(:disabled) { background: #fde68a; }
   .btn-full { width: 100%; }
   .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 

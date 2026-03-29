@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="section-title">Bet</h2>
+<h2 class="section-title">{% if show_submitted %}Bet Placed{% else %}Place My Bet{% endif %}</h2>
 
 {# ── Submitted — read-only view ── #}
 {% if show_submitted %}
-<div class="card" style="margin-bottom:1rem;">
+<div class="card" style="margin-bottom:1rem; border-color: var(--primary); background: var(--primary-pale);">
   <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-    <div>
-      <strong>{{ guest.name }}</strong>
-      <div class="muted" style="font-size:0.85rem;">Submitted: {{ guest.submitted_at or 'Unknown' }}</div>
+    <div style="display:flex; align-items:center; gap:0.6rem;">
+      <span style="font-size:1.5rem; line-height:1;">✓</span>
+      <div style="font-size:1.1rem; font-weight:700;">You're in, {{ guest.name.split()[0] }}!</div>
     </div>
-    <span class="badge badge-green">✓ Bet Placed</span>
+    <div class="muted" style="font-size:0.8rem;">{{ guest.submitted_at or '' }}</div>
   </div>
 </div>
 
@@ -31,6 +31,41 @@
   </table>
 </div>
 
+{% if actual_results and bet %}
+<div class="card" style="margin-bottom:1.25rem;">
+  <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">How You Did</h3>
+  <table>
+    <thead>
+      <tr><th>Breed</th><th style="text-align:right;">Your Guess</th><th style="text-align:right;">Actual</th></tr>
+    </thead>
+    <tbody>
+      {% set guessed_breeds = bet | map(attribute='breed') | list %}
+      {% for b in bet %}
+      <tr>
+        <td>{{ b.breed }}</td>
+        <td style="text-align:right;">{{ b.percentage }}%</td>
+        <td style="text-align:right;">{{ (actual_results.get(b.breed, 0)) | int }}%</td>
+      </tr>
+      {% endfor %}
+      {% for breed, pct in actual_results.items() %}
+      {% if breed not in guessed_breeds %}
+      <tr>
+        <td>{{ breed }}</td>
+        <td style="text-align:right; color:var(--muted);">—</td>
+        <td style="text-align:right;">{{ pct | int }}%</td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if score is not none %}
+  <div style="margin-top:0.75rem; padding-top:0.5rem; border-top:1px solid var(--border); text-align:right; font-size:0.9rem;">
+    Your score: <strong>{{ score }} pts off</strong>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
 {% if leaderboard %}
 <div class="card">
   <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">🏆 Leaderboard</h3>
@@ -41,7 +76,7 @@
     <tbody>
       {% for entry in leaderboard %}
       <tr {{ 'style="background:var(--primary-pale);"' | safe if entry.name == guest.name }}>
-        <td class="rank">{{ loop.index }}{{ ' 🏆' if loop.first }}</td>
+        <td class="rank">{{ loop.index }}{% if loop.first %} 🏆{% elif loop.last and leaderboard|length > 1 %} 💩{% endif %}</td>
         <td>{{ entry.name }}{% if entry.name == guest.name %} <strong>(you)</strong>{% endif %}</td>
         <td style="text-align:right;">{{ entry.score }} pts</td>
       </tr>
@@ -56,11 +91,88 @@
 
 {# ── Betting locked ── #}
 {% elif locked %}
-<div class="card" style="text-align:center;">
+<div class="card" style="text-align:center; margin-bottom:1.25rem;">
   <div style="font-size:2rem; margin-bottom:0.75rem;">🔒</div>
   <h3 style="margin-bottom:0.5rem;">Betting is Closed</h3>
-  <p class="muted">The organizers have locked in the bets. Check back for the reveal!</p>
+  <p class="muted">The results will be revealed at the Reception Dinner on Saturday!</p>
 </div>
+
+{% if bet %}
+<div class="card" style="margin-bottom:1.25rem;">
+  <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">Your Submission</h3>
+  <table>
+    <thead>
+      <tr><th>Breed</th><th style="text-align:right;">Percentage</th></tr>
+    </thead>
+    <tbody>
+      {% for b in bet %}
+      <tr>
+        <td>{{ b.breed }}</td>
+        <td style="text-align:right; font-weight:600;">{{ b.percentage }}%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if actual_results and bet %}
+<div class="card" style="margin-bottom:1.25rem;">
+  <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">How You Did</h3>
+  <table>
+    <thead>
+      <tr><th>Breed</th><th style="text-align:right;">Your Guess</th><th style="text-align:right;">Actual</th></tr>
+    </thead>
+    <tbody>
+      {% set guessed_breeds = bet | map(attribute='breed') | list %}
+      {% for b in bet %}
+      <tr>
+        <td>{{ b.breed }}</td>
+        <td style="text-align:right;">{{ b.percentage }}%</td>
+        <td style="text-align:right;">{{ (actual_results.get(b.breed, 0)) | int }}%</td>
+      </tr>
+      {% endfor %}
+      {% for breed, pct in actual_results.items() %}
+      {% if breed not in guessed_breeds %}
+      <tr>
+        <td>{{ breed }}</td>
+        <td style="text-align:right; color:var(--muted);">—</td>
+        <td style="text-align:right;">{{ pct | int }}%</td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if score is not none %}
+  <div style="margin-top:0.75rem; padding-top:0.5rem; border-top:1px solid var(--border); text-align:right; font-size:0.9rem;">
+    Your score: <strong>{{ score }} pts off</strong>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if leaderboard %}
+<div class="card">
+  <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">🏆 Leaderboard</h3>
+  <table>
+    <thead>
+      <tr><th>#</th><th>Name</th><th style="text-align:right;">Score</th></tr>
+    </thead>
+    <tbody>
+      {% for entry in leaderboard %}
+      <tr {{ 'style="background:var(--primary-pale);"' | safe if guest and entry.name == guest.name }}>
+        <td class="rank">{{ loop.index }}{% if loop.first %} 🏆{% elif loop.last and leaderboard|length > 1 %} 💩{% endif %}</td>
+        <td>{{ entry.name }}{% if guest and entry.name == guest.name %} <strong>(you)</strong>{% endif %}</td>
+        <td style="text-align:right;">{{ entry.score }} pts</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted" style="font-size:0.8rem; margin-top:0.75rem;">
+    Score = points off from actual results. Lower is better.
+  </p>
+</div>
+{% endif %}
 
 {# ── Bet form or identity lookup (rules always shown) ── #}
 {% else %}
@@ -88,7 +200,7 @@
   {% endif %}
 
   <form method="post" action="{{ url_for('main.bet_submit') }}" id="bet-form">
-    <select id="breed-select-template" name="breed[]" required style="display:none;">
+    <select id="breed-select-template" name="breed[]" required disabled style="display:none;">
       <option value="">— Select a breed —</option>
       {% for b in breeds %}
       <option value="{{ b }}">{{ b }}</option>
@@ -166,13 +278,11 @@
       </datalist>
     </div>
 
-    {% if status.require_pin %}
     <div class="field">
       <label for="phone4">Last 4 Digits of Your Phone</label>
       <input type="tel" name="phone4" id="phone4" maxlength="4" pattern="\d{4}"
              placeholder="e.g. 4827" inputmode="numeric" autocomplete="off">
     </div>
-    {% endif %}
 
     <button type="submit" class="btn btn-primary btn-full">Continue &rarr;</button>
   </form>
@@ -193,6 +303,7 @@
     var sel = tmpl.cloneNode(true);
     sel.id = '';
     sel.style.display = '';
+    sel.disabled = false;
     sel.value = '';
     var row = document.createElement('div');
     row.className = 'breed-row';

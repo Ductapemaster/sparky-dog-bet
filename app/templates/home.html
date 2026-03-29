@@ -17,9 +17,9 @@
   </a>
   <div class="path-divider">or</div>
   <a href="{{ url_for('main.bet') }}" class="path-card path-card-primary">
-    <div class="path-card-icon">🎯</div>
-    <div class="path-card-title">Place My Bet</div>
-    <div class="path-card-desc">Ready to guess? Pick your breeds, assign percentages, and submit your $1 entry.</div>
+    <div class="path-card-icon">{% if nav_status.locked %}🔒{% else %}🎯{% endif %}</div>
+    <div class="path-card-title">{% if nav_status.locked %}Betting Closed{% else %}Place My Bet{% endif %}</div>
+    <div class="path-card-desc">{% if nav_status.locked %}Betting is locked. Check back for the reveal at the Reception Dinner!{% else %}Ready to guess? Pick your breeds, assign percentages, and submit your $1 entry.{% endif %}</div>
   </a>
 </div>
 

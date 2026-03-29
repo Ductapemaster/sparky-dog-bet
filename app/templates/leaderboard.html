@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard — Sparky's DNA Bet{% endblock %}
+{% block content %}
+<h2 class="section-title">Leaderboard</h2>
+
+{% if not status.revealed %}
+<div class="card" style="text-align:center;">
+  <div style="font-size:2rem; margin-bottom:0.75rem;">🎲</div>
+  <h3 style="margin-bottom:0.5rem;">Results Not Yet Revealed</h3>
+  <p class="muted">The leaderboard will be revealed at the Reception Dinner on Saturday. Check back then to see where you landed!</p>
+</div>
+{% else %}
+<div class="card">
+  <p class="muted" style="font-size:0.85rem; margin-bottom:1rem;">Tap any row to see that person's full guess breakdown.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Name</th>
+        <th style="text-align:right;">Score</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in leaderboard %}
+      <tr class="lb-row" onclick="toggleRow({{ loop.index }})" style="cursor:pointer;">
+        <td class="rank" style="white-space:nowrap;">{{ loop.index }}{% if loop.first %} 🏆{% elif loop.last and leaderboard|length > 1 %} 💩{% endif %}</td>
+        <td>{{ entry.name }}</td>
+        <td style="text-align:right;">{{ entry.score }}</td>
+      </tr>
+      <tr id="lb-detail-{{ loop.index }}" style="display:none;">
+        <td colspan="3" style="padding:0; border-top:none;">
+          <div style="background:var(--primary-pale); padding:0.75rem 1rem 0.75rem 1rem; border-radius:0 0 4px 4px;">
+            <table style="width:100%; font-size:0.85rem;">
+              <thead>
+                <tr>
+                  <th style="font-weight:600; padding-bottom:0.4rem;">Breed</th>
+                  <th style="text-align:right; font-weight:600; padding-bottom:0.4rem;">Guess</th>
+                  <th style="text-align:right; font-weight:600; padding-bottom:0.4rem;">Actual</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% set guessed = entry.bets | map(attribute='breed') | list %}
+                {% for b in entry.bets %}
+                <tr>
+                  <td>{{ b.breed }}</td>
+                  <td style="text-align:right;">{{ b.percentage }}%</td>
+                  <td style="text-align:right;">{{ actual.get(b.breed, 0) | int }}%</td>
+                </tr>
+                {% endfor %}
+                {% for breed, pct in actual.items() %}
+                {% if breed not in guessed %}
+                <tr>
+                  <td style="color:var(--muted);">{{ breed }}</td>
+                  <td style="text-align:right; color:var(--muted);">—</td>
+                  <td style="text-align:right;">{{ pct | int }}%</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted" style="font-size:0.8rem; margin-top:0.75rem;">
+    Score = points off from actual results. Lower is better. Ties broken by submission time.
+  </p>
+</div>
+{% endif %}
+
+<script>
+  function toggleRow(i) {
+    var row = document.getElementById('lb-detail-' + i);
+    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+  }
+</script>
+{% endblock %}
