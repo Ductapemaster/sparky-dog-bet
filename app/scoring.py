@@ -27,9 +27,12 @@ def get_leaderboard():
     for guest in get_all_guests():
         if not guest['has_submitted']:
             continue
+        guess = {b['breed']: float(b['percentage']) for b in get_bet(guest['name'])}
+        all_breeds = set(actual) | set(guess)
+        score = round(sum(abs(actual.get(b, 0.0) - guess.get(b, 0.0)) for b in all_breeds) / 2, 1)
         results.append({
             'name': guest['name'],
-            'score': calculate_score(guest['name']),
+            'score': score,
             'submitted_at': guest['submitted_at'],
         })
 

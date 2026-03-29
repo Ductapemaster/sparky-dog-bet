@@ -25,26 +25,32 @@ scored against his real DNA test results. Hosted on Dan's home server via Docker
 |--------|------|-------------|
 | GET | `/` | Home page |
 | GET | `/gallery` | Photo gallery |
-| GET | `/about` | About page |
+| GET | `/about` | About Sparky page with photo gallery |
+| GET | `/leaderboard` | Public leaderboard (placeholder until results revealed) |
 | GET | `/gallery-img/<filename>` | Serve uploaded gallery image from `data/gallery/` |
-| GET | `/bet` | Bet form (lookup → form → submitted view) |
+| GET | `/bet` | Bet flow (identity lookup → form → submitted view) |
 | POST | `/bet/verify` | Verify guest identity, set session |
 | POST | `/bet/submit` | Submit bet |
-| GET | `/admin` | Admin dashboard (session-gated, two tabs: Overview / Data) |
+| GET | `/admin` | Admin dashboard (session-gated) |
 | POST | `/admin/login` | Admin login |
-| POST | `/admin/toggle/<key>` | Toggle BettingLocked / ResultsRevealed / RequirePin |
+| POST | `/admin/toggle/<key>` | Toggle `BettingLocked` or `ResultsRevealed` |
 | POST | `/admin/logout` | Admin logout |
 | POST | `/admin/guests/add` | Add a guest |
 | POST | `/admin/guests/<id>/edit` | Edit guest name/phone4 |
 | POST | `/admin/guests/<id>/delete` | Delete guest (also deletes their bets) |
 | POST | `/admin/guests/<id>/reset-bet` | Clear a guest's bet so they can re-submit |
+| POST | `/admin/bets/add` | Add a bet row for a guest |
+| POST | `/admin/bets/<id>/edit` | Edit a single bet row (breed/percentage) |
 | POST | `/admin/bets/<id>/delete` | Delete a single bet row |
 | POST | `/admin/wipe-all-bets` | Delete ALL bets and reset all guests (testing only) |
+| POST | `/admin/breeds/add` | Add a breed to the dropdown list |
+| POST | `/admin/breeds/<id>/edit` | Edit a breed name |
+| POST | `/admin/breeds/<id>/delete` | Delete a breed |
 | POST | `/admin/actual/add` | Add/upsert an actual DNA result |
 | POST | `/admin/actual/<id>/edit` | Edit an actual DNA result |
 | POST | `/admin/actual/<id>/delete` | Delete an actual DNA result |
 | POST | `/admin/gallery/upload` | Upload a gallery photo (stored in `data/gallery/`) |
-| POST | `/admin/gallery/<id>/edit` | Edit gallery photo caption/sort order |
+| POST | `/admin/gallery/reorder` | Reorder gallery images (accepts JSON `{order: [ids]}`) |
 | POST | `/admin/gallery/<id>/delete` | Delete gallery photo (removes file from disk too) |
 
 ## Database
@@ -58,7 +64,7 @@ SQLite file at `DB_PATH` (default `data/sparky.db`). Tables:
 | `actual_results` | id, breed, actual_percentage |
 | `breeds` | id, breed_name |
 | `config` | key, value |
-| `gallery` | id, file_id (stores filename), caption, sort_order |
+| `gallery` | id, file_id (stores filename), sort_order |
 
 Config keys: `AdminPassword`, `BettingLocked`, `RequirePin`, `ResultsRevealed`
 
@@ -72,20 +78,25 @@ Database is created and seeded automatically on startup via `db.init_db()`:
 Images are uploaded via the admin panel and stored at `data/gallery/` (inside the Docker
 volume, so they persist across rebuilds). Served at `/gallery-img/<filename>`. Deleting a
 photo from the admin also removes the file from disk. Supported formats: jpg, jpeg, png,
-gif, webp.
+gif, webp. Order is set via drag-and-drop in the admin Gallery tab.
 
 ## Admin Panel
 
-Two-tab layout at `/admin`:
+Five-tab layout at `/admin`: **Overview**, **Guests**, **Bets**, **Results**, **Gallery**
+
 - **Overview** — stats (submitted/total/remaining), game controls (lock betting, reveal
-  results, require PIN), leaderboard, guest submission status
-- **Data** — full CRUD for guests, bets, actual results, gallery; Danger Zone (wipe all bets)
+  results), leaderboard with expandable rows, guest submission status
+- **Guests** — CRUD for guest names and phone4 PINs
+- **Bets** — collapsible per-guest groups; add/edit/delete individual bet rows; per-guest
+  wipe; Danger Zone (wipe all bets)
+- **Results** — add/edit/delete actual DNA result rows (breed + percentage)
+- **Gallery** — upload photos; drag-and-drop to reorder; delete
 
-Nav shows an "Admin" badge, "Overview"/"Data" tabs, and a "Sign Out" button. Tab state is
-preserved across POST-redirects via `sessionStorage`.
+Tab state is preserved across POST-redirects via `sessionStorage`. Admin forms submit via
+background `fetch` (AJAX) without a full page reload, except file uploads.
 
-To reset a guest's bet (let them re-submit): Guests table → Reset Bet button. This deletes
-their bet rows and clears `has_submitted`.
+To reset a guest's bet (let them re-submit): Bets tab → guest group → wipe button (yellow).
+This deletes their bet rows and clears `has_submitted`.
 
 ## Session
 
@@ -101,16 +112,18 @@ their bet rows and clears `has_submitted`.
 ```
 Score = Σ |guess_breed_i% - actual_breed_i%| / 2
 ```
-Range 0–100. Lower = better. Ties broken by `submitted_at` timestamp.
+Range 0–100. Lower = better. Unguessed breeds are penalized (treated as 0% guess).
+Ties broken by earlier `submitted_at` timestamp. Score kept to 1 decimal place.
 
 ## Key Conventions
 
 - `db.is_true(val)` normalises boolean config values
-- `_submit_lock` (threading.Lock) in `db.py` prevents race conditions on double-tap submissions
+- `_submit_lock` (threading.Lock) in `db.py` prevents same-process double-tap on submit
 - `db._gallery_dir()` returns the gallery image directory (`data/gallery/` by default)
 - Config booleans toggle via `admin_toggle/<key>` — reads current, flips it, writes back
-- Guest name lookup uses a typeahead `<input list="...">` (not a dropdown select)
-- The `×` remove button on breed rows is hidden when only one row exists
+- Guest name lookup uses a typeahead `<input list="...">` (not a `<select>`)
+- PIN (phone4) is always required at login — `RequirePin` config key is not exposed in UI
+- The `×` remove button on breed rows is hidden when only one row remains
 
 ## Development Workflow
 
@@ -119,7 +132,7 @@ Range 0–100. Lower = better. Ties broken by `submitted_at` timestamp.
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # set SECRET_KEY
+cp .env.example .env   # fill in SECRET_KEY
 
 # Load guests (before the game)
 python import_guests.py guests.csv
@@ -138,12 +151,13 @@ docker compose logs -f web
 
 - DB and gallery images persist via a named Docker volume (`sparky_db` → `/app/data`)
 - **Tailscale Funnel**: expose port 9999 via Tailscale for HTTPS without Caddy
-- No Google credentials needed — Sheets integration has been removed entirely
+- Gunicorn runs 4 workers with a 60-second timeout
 
-## What Needs Content
+## Environment Variables (`.env`)
 
-- `app/templates/home.html` — replace `[Partner's Name]`
-- `app/templates/about.html` — replace all `[TODO]` placeholders
-- `guests.csv` → run `import_guests.py` to load real guest list before the party
-- Upload gallery photos via `/admin` → Data tab → Gallery Photos
-- Enter actual DNA results via `/admin` → Data tab → Actual DNA Results (after the reveal)
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SECRET_KEY` | Yes | Flask session signing key — generate a long random string |
+| `DB_PATH` | No | Path to SQLite file (default: `data/sparky.db`) |
+
+`.env` is gitignored. Copy `.env.example` and fill in `SECRET_KEY` before first run.
