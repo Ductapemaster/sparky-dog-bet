@@ -338,8 +338,13 @@
     .main { margin: 1.25rem auto; }
     .card { padding: 1.1rem; }
     .hero h1 { font-size: 1.6rem; }
-    .breed-row { grid-template-columns: 1fr 70px 36px; }
+    .breed-row { grid-template-columns: 1fr 65px 44px; }
     table { font-size: 0.875rem; }
     th, td { padding: 0.5rem 0.5rem; }
+
+    /* 44px minimum tap targets */
+    .nav-link { min-height: 44px; display: flex; align-items: center; padding: 0 0.6rem; }
+    .btn-remove { min-width: 44px; min-height: 44px; font-size: 1.4rem; }
+    .btn-add-breed { width: 100%; }
   }
 

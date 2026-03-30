@@ -218,7 +218,8 @@
             {% endfor %}
           </select>
           <input type="number" name="percentage[]" class="breed-pct"
-                 value="{{ b.percentage }}" min="1" max="99" placeholder="%" required oninput="updateTotal()">
+                 value="{{ b.percentage }}" min="1" max="99" placeholder="%" required
+                 inputmode="numeric" oninput="updateTotal()">
           <button type="button" class="btn-remove" onclick="removeRow(this)">×</button>
         </div>
         {% endfor %}
@@ -231,13 +232,14 @@
             {% endfor %}
           </select>
           <input type="number" name="percentage[]" class="breed-pct"
-                 placeholder="%" min="1" max="99" required oninput="updateTotal()">
+                 placeholder="%" min="1" max="99" required
+                 inputmode="numeric" oninput="updateTotal()">
           <button type="button" class="btn-remove" onclick="removeRow(this)">×</button>
         </div>
       {% endif %}
     </div>
 
-    <button type="button" class="btn btn-secondary" onclick="addRow()" style="margin-bottom:1rem;">
+    <button type="button" class="btn btn-secondary btn-add-breed" onclick="addRow()" style="margin-bottom:1rem;">
       + Add Another Breed
     </button>
 
@@ -311,6 +313,7 @@
     var pct = document.createElement('input');
     pct.type = 'number'; pct.name = 'percentage[]'; pct.className = 'breed-pct';
     pct.placeholder = '%'; pct.min = '1'; pct.max = '99'; pct.required = true;
+    pct.setAttribute('inputmode', 'numeric');
     pct.setAttribute('oninput', 'updateTotal()');
     row.appendChild(pct);
     var btn = document.createElement('button');
