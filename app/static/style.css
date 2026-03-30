@@ -307,8 +307,8 @@
 
   /* ── Responsive tweaks ───────────────────────────────────── */
   @media (max-width: 480px) {
-    .nav { padding: 0 0.75rem; }
-    .nav-links { width: 100%; justify-content: center; padding-bottom: 0.35rem; }
+    .nav { padding: 0 0.75rem 0.5rem; }
+    .nav-links { width: 100%; justify-content: center; }
     .main { margin: 1.25rem auto; }
     .card { padding: 1.1rem; }
     .hero h1 { font-size: 1.6rem; }
