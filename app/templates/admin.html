@@ -420,10 +420,13 @@
           <td colspan="3">
             <form method="post" action="{{ url_for('main.admin_actual_edit', result_id=r.id) }}"
                   class="inline-form">
-              <input type="text" name="breed" value="{{ r.breed }}" placeholder="Breed"
-                     list="breed-list" autocomplete="off" required>
+              <select name="breed" required style="flex:1; min-width:160px;">
+                {% for breed in breeds %}
+                <option value="{{ breed }}" {{ 'selected' if breed == r.breed }}>{{ breed }}</option>
+                {% endfor %}
+              </select>
               <input type="number" name="pct" value="{{ r.actual_percentage | int }}"
-                     placeholder="%" step="1" min="0" max="100" required style="width:75px;">
+                     placeholder="%" step="1" min="0" max="100" required style="width:5rem;">
               <button type="submit" class="btn btn-primary btn-sm">Save</button>
               <button type="button" class="btn btn-secondary btn-sm"
                       onclick="toggleRow('ea{{ r.id }}')">Cancel</button>
@@ -440,10 +443,14 @@
       </summary>
       <form method="post" action="{{ url_for('main.admin_actual_add') }}" class="inline-form"
             style="margin-top:0.75rem;">
-        <input type="text" name="breed" placeholder="Breed name"
-               list="breed-list" autocomplete="off" required>
+        <select name="breed" required style="flex:1; min-width:160px;">
+          <option value="">— Select breed —</option>
+          {% for breed in breeds %}
+          <option value="{{ breed }}">{{ breed }}</option>
+          {% endfor %}
+        </select>
         <input type="number" name="pct" placeholder="%" step="1" min="0" max="100"
-               required style="width:75px;">
+               required style="width:5rem;">
         <button type="submit" class="btn btn-primary btn-sm">Add</button>
       </form>
     </details>
@@ -504,9 +511,6 @@
     </details>
   </div>
 
-  <datalist id="breed-list">
-    {% for b in breeds %}<option value="{{ b }}">{% endfor %}
-  </datalist>
 
 </div>{# /tab-results #}
 
