@@ -36,12 +36,13 @@
   .nav {
     background: var(--card);
     border-bottom: 1px solid var(--border);
-    padding: 0 1rem;
+    padding: 0.75rem 1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    row-gap: 0.5rem;
+    column-gap: 0.5rem;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -52,7 +53,6 @@
     font-size: 1.1rem;
     font-weight: 700;
     color: var(--primary);
-    padding: 0.75rem 0;
     white-space: nowrap;
   }
   .nav-brand:hover { text-decoration: none; }
@@ -66,7 +66,7 @@
 
   .nav-link {
     padding: 0.5rem 0.75rem;
-    border-radius: 99px;
+    border-radius: var(--radius);
     color: var(--muted);
     font-size: 0.9rem;
     font-weight: 500;
@@ -307,7 +307,7 @@
 
   /* ── Responsive tweaks ───────────────────────────────────── */
   @media (max-width: 480px) {
-    .nav { padding: 0 0.75rem 0.5rem; }
+    .nav { padding: 0.75rem; }
     .nav-links { width: 100%; justify-content: center; }
     .main { margin: 1.25rem auto; }
     .card { padding: 1.1rem; }
