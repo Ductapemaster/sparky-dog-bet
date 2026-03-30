@@ -4,13 +4,23 @@
 
 {# ── Submitted — read-only view ── #}
 {% if show_submitted %}
+{% if leaderboard %}
+{% set ns = namespace(rank=none) %}
+{% for entry in leaderboard %}{% if entry.name == guest.name %}{% set ns.rank = loop.index %}{% endif %}{% endfor %}
+{% endif %}
 <div class="card" style="margin-bottom:1rem; border-color: var(--primary); background: var(--primary-pale);">
   <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
     <div style="display:flex; align-items:center; gap:0.6rem;">
       <span style="font-size:1.5rem; line-height:1;">✓</span>
       <div style="font-size:1.1rem; font-weight:700;">You're in, {{ guest.name.split()[0] }}!</div>
     </div>
+    {% if leaderboard and ns.rank is not none %}
+    <a href="{{ url_for('main.leaderboard') }}" style="font-size:1.1rem; font-weight:700; color:var(--primary); text-decoration:none;">
+      #{{ ns.rank }} of {{ leaderboard|length }}
+    </a>
+    {% else %}
     <div class="muted" style="font-size:0.8rem;">{{ guest.submitted_at or '' }}</div>
+    {% endif %}
   </div>
 </div>
 
@@ -66,16 +76,6 @@
       {% endif %}
     </tbody>
   </table>
-  {% if leaderboard %}
-  {% set ns = namespace(rank=none) %}
-  {% for entry in leaderboard %}{% if guest and entry.name == guest.name %}{% set ns.rank = loop.index %}{% endif %}{% endfor %}
-  {% if ns.rank is not none %}
-  <p style="margin-top:0.75rem; padding-top:0.5rem; border-top:1px solid var(--border); font-size:0.9rem;">
-    You're ranked <strong>#{{ ns.rank }}</strong> of {{ leaderboard|length }}.
-    <a href="{{ url_for('main.leaderboard') }}">See full leaderboard →</a>
-  </p>
-  {% endif %}
-  {% endif %}
 </div>
 {% endif %}
 
@@ -141,16 +141,6 @@
       {% endif %}
     </tbody>
   </table>
-  {% if leaderboard %}
-  {% set ns = namespace(rank=none) %}
-  {% for entry in leaderboard %}{% if guest and entry.name == guest.name %}{% set ns.rank = loop.index %}{% endif %}{% endfor %}
-  {% if ns.rank is not none %}
-  <p style="margin-top:0.75rem; padding-top:0.5rem; border-top:1px solid var(--border); font-size:0.9rem;">
-    You're ranked <strong>#{{ ns.rank }}</strong> of {{ leaderboard|length }}.
-    <a href="{{ url_for('main.leaderboard') }}">See full leaderboard →</a>
-  </p>
-  {% endif %}
-  {% endif %}
 </div>
 {% endif %}
 
