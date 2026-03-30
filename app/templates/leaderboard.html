@@ -11,13 +11,13 @@
 </div>
 {% else %}
 <div class="card">
-  <p class="muted" style="font-size:0.85rem; margin-bottom:1rem;">Tap any row to see that person's full guess breakdown.</p>
+  <p class="muted" style="font-size:0.85rem; margin-bottom:1rem;">Lowest points off wins — 0 is a perfect guess. Tap any row to see that person's full breakdown.</p>
   <table>
     <thead>
       <tr>
         <th>#</th>
         <th>Name</th>
-        <th style="text-align:right;">Score</th>
+        <th style="text-align:right;">Points Off</th>
       </tr>
     </thead>
     <tbody>
@@ -65,7 +65,7 @@
     </tbody>
   </table>
   <p class="muted" style="font-size:0.8rem; margin-top:0.75rem;">
-    Score = points off from actual results. Lower is better. Ties broken by submission time.
+    Ties broken by submission time.
   </p>
 </div>
 {% endif %}
