@@ -66,7 +66,7 @@
 
   .nav-link {
     padding: 0.5rem 0.75rem;
-    border-radius: var(--radius);
+    border-radius: 99px;
     color: var(--muted);
     font-size: 0.9rem;
     font-weight: 500;
@@ -315,8 +315,8 @@
     table { font-size: 0.875rem; }
     th, td { padding: 0.5rem 0.5rem; }
 
-    /* 44px minimum tap targets */
-    .nav-link { padding: 0.7rem 0.6rem; }
+    /* ~44px tap targets */
+    .nav-link { padding: 0.6rem 0.75rem; }
     .btn-remove { min-width: 44px; min-height: 44px; font-size: 1.4rem; }
     .btn-add-breed { width: 100%; }
   }
