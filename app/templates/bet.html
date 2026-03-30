@@ -66,29 +66,16 @@
       {% endif %}
     </tbody>
   </table>
-</div>
-{% endif %}
-
-{% if leaderboard %}
-<div class="card">
-  <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">🏆 Leaderboard</h3>
-  <table>
-    <thead>
-      <tr><th>#</th><th>Name</th><th style="text-align:right;">Points Off</th></tr>
-    </thead>
-    <tbody>
-      {% for entry in leaderboard %}
-      <tr {{ 'style="background:var(--primary-pale);"' | safe if entry.name == guest.name }}>
-        <td class="rank">{{ loop.index }}{% if loop.first %} 🏆{% elif loop.last and leaderboard|length > 1 %} 💩{% endif %}</td>
-        <td>{{ entry.name }}{% if entry.name == guest.name %} <strong>(you)</strong>{% endif %}</td>
-        <td style="text-align:right;">{{ entry.score }} pts</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  <p class="muted" style="font-size:0.8rem; margin-top:0.75rem;">
-    Lowest points off wins. 0 is a perfect guess. Ties broken by submission time.
+  {% if leaderboard %}
+  {% set ns = namespace(rank=none) %}
+  {% for entry in leaderboard %}{% if guest and entry.name == guest.name %}{% set ns.rank = loop.index %}{% endif %}{% endfor %}
+  {% if ns.rank is not none %}
+  <p style="margin-top:0.75rem; padding-top:0.5rem; border-top:1px solid var(--border); font-size:0.9rem;">
+    You're ranked <strong>#{{ ns.rank }}</strong> of {{ leaderboard|length }}.
+    <a href="{{ url_for('main.leaderboard') }}">See full leaderboard →</a>
   </p>
+  {% endif %}
+  {% endif %}
 </div>
 {% endif %}
 
@@ -154,29 +141,16 @@
       {% endif %}
     </tbody>
   </table>
-</div>
-{% endif %}
-
-{% if leaderboard %}
-<div class="card">
-  <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">🏆 Leaderboard</h3>
-  <table>
-    <thead>
-      <tr><th>#</th><th>Name</th><th style="text-align:right;">Points Off</th></tr>
-    </thead>
-    <tbody>
-      {% for entry in leaderboard %}
-      <tr {{ 'style="background:var(--primary-pale);"' | safe if guest and entry.name == guest.name }}>
-        <td class="rank">{{ loop.index }}{% if loop.first %} 🏆{% elif loop.last and leaderboard|length > 1 %} 💩{% endif %}</td>
-        <td>{{ entry.name }}{% if guest and entry.name == guest.name %} <strong>(you)</strong>{% endif %}</td>
-        <td style="text-align:right;">{{ entry.score }} pts</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  <p class="muted" style="font-size:0.8rem; margin-top:0.75rem;">
-    Lowest points off wins. 0 is a perfect guess. Ties broken by submission time.
+  {% if leaderboard %}
+  {% set ns = namespace(rank=none) %}
+  {% for entry in leaderboard %}{% if guest and entry.name == guest.name %}{% set ns.rank = loop.index %}{% endif %}{% endfor %}
+  {% if ns.rank is not none %}
+  <p style="margin-top:0.75rem; padding-top:0.5rem; border-top:1px solid var(--border); font-size:0.9rem;">
+    You're ranked <strong>#{{ ns.rank }}</strong> of {{ leaderboard|length }}.
+    <a href="{{ url_for('main.leaderboard') }}">See full leaderboard →</a>
   </p>
+  {% endif %}
+  {% endif %}
 </div>
 {% endif %}
 
