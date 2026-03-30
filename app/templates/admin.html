@@ -518,42 +518,30 @@
   <div class="card" style="margin-bottom:1.5rem;">
     <h3 class="admin-sh">Gallery Photos</h3>
     <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
-      Drag rows to reorder. Changes save automatically.
+      Drag to reorder. Changes save automatically.
     </p>
     {% if gallery %}
-    <table style="margin-bottom:1rem;">
-      <tbody class="gallery-sortable">
-        {% for img in gallery %}
-        <tr draggable="true" data-img-id="{{ img.id }}"
-            style="cursor:default;">
-          <td style="width:1.5rem; cursor:grab; color:var(--muted); padding-right:0.25rem; user-select:none;">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
-              <rect x="2" y="2.5" width="10" height="1.5" rx="0.75"/>
-              <rect x="2" y="6" width="10" height="1.5" rx="0.75"/>
-              <rect x="2" y="9.5" width="10" height="1.5" rx="0.75"/>
-            </svg>
-          </td>
-          <td style="width:64px;">
-            <a href="{{ url_for('main.gallery_img', filename=img.filename) }}" target="_blank">
-              <img src="{{ url_for('main.gallery_img', filename=img.filename) }}"
-                   alt="{{ img.filename }}" loading="lazy"
-                   style="width:56px; height:56px; object-fit:cover; border-radius:6px;
-                          border:1px solid var(--border); display:block;">
-            </a>
-          </td>
-          <td>{{ img.filename }}</td>
-          <td style="text-align:right;">
-            <form method="post" action="{{ url_for('main.admin_gallery_delete', image_id=img.id) }}"
-                  style="display:inline;" onsubmit="return confirm('Delete this photo?')">
-              <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-              </button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="gallery-grid" id="gallery-sortable" style="margin-bottom:1rem;">
+      {% for img in gallery %}
+      <div class="gallery-item" draggable="true" data-img-id="{{ img.id }}"
+           style="cursor:grab; position:relative;">
+        <img src="{{ url_for('main.gallery_img', filename=img.filename) }}"
+             alt="{{ img.filename }}" loading="lazy"
+             style="pointer-events:none;">
+        <form method="post" action="{{ url_for('main.admin_gallery_delete', image_id=img.id) }}"
+              style="position:absolute; top:0.3rem; right:0.3rem;"
+              onsubmit="return confirm('Delete this photo?')">
+          <button type="submit" title="Delete"
+                  style="background:rgba(0,0,0,0.55); border:none; color:#fff;
+                         border-radius:50%; width:1.75rem; height:1.75rem;
+                         font-size:1.1rem; line-height:1; cursor:pointer;
+                         display:flex; align-items:center; justify-content:center;">
+            &times;
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
     {% endif %}
     <details>
       <summary class="btn btn-secondary btn-sm" style="display:inline-block; cursor:pointer;">
@@ -631,6 +619,61 @@
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
   }
 
+  // ── Gallery drag-and-drop reorder ─────────────────────────
+  function initGallerySort() {
+    var grid = document.getElementById('gallery-sortable');
+    if (!grid) return;
+    var dragging = null;
+
+    grid.querySelectorAll('.gallery-item').forEach(function (item) {
+      item.addEventListener('dragstart', function (e) {
+        dragging = item;
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(function () { item.style.opacity = '0.4'; }, 0);
+      });
+
+      item.addEventListener('dragend', function () {
+        item.style.opacity = '';
+        dragging = null;
+        grid.querySelectorAll('.gallery-item').forEach(function (i) {
+          i.style.outline = '';
+        });
+      });
+
+      item.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (item !== dragging) item.style.outline = '2px solid var(--primary)';
+      });
+
+      item.addEventListener('dragleave', function () {
+        item.style.outline = '';
+      });
+
+      item.addEventListener('drop', function (e) {
+        e.preventDefault();
+        item.style.outline = '';
+        if (!dragging || dragging === item) return;
+        var rect = item.getBoundingClientRect();
+        if (e.clientX < rect.left + rect.width / 2) {
+          grid.insertBefore(dragging, item);
+        } else {
+          grid.insertBefore(dragging, item.nextSibling);
+        }
+        var order = Array.from(grid.querySelectorAll('.gallery-item')).map(function (i) {
+          return parseInt(i.dataset.imgId);
+        });
+        fetch('/admin/gallery/reorder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order: order })
+        });
+      });
+    });
+  }
+
+  initGallerySort();
+
   // ── Background form submission ────────────────────────────
   (function () {
     var panelIds = ['tab-overview', 'tab-guests', 'tab-bets', 'tab-results', 'tab-gallery'];
@@ -645,6 +688,7 @@
         current.innerHTML = fresh.innerHTML;
         current.style.display = display;
       });
+      initGallerySort();
     }
 
     document.addEventListener('submit', function (e) {
