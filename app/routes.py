@@ -1,6 +1,6 @@
 import os
 from itertools import groupby
-from flask import Blueprint, render_template, request, session, redirect, url_for, send_from_directory
+from flask import Blueprint, render_template, request, session, redirect, url_for, send_from_directory, g
 from werkzeug.utils import secure_filename
 from . import db, scoring
 
@@ -13,11 +13,13 @@ def inject_nav_status():
 
 
 def _status():
-    return {
-        'locked':      db.is_true(db.get_config('BettingLocked')),
-        'require_pin': db.is_true(db.get_config('RequirePin')),
-        'revealed':    db.is_true(db.get_config('ResultsRevealed')),
-    }
+    if 'status' not in g:
+        g.status = {
+            'locked':      db.is_true(db.get_config('BettingLocked')),
+            'require_pin': db.is_true(db.get_config('RequirePin')),
+            'revealed':    db.is_true(db.get_config('ResultsRevealed')),
+        }
+    return g.status
 
 
 def _require_admin():
@@ -55,8 +57,6 @@ def about():
 def leaderboard():
     status = _status()
     lb = scoring.get_leaderboard() if status['revealed'] else []
-    for entry in lb:
-        entry['bets'] = db.get_bet(entry['name'])
     return render_template('leaderboard.html',
         leaderboard=lb, actual=db.get_actual_results(), status=status)
 
@@ -175,8 +175,6 @@ def admin():
     submitted = sum(1 for g in guests if g['has_submitted'])
 
     lb = scoring.get_leaderboard()
-    for entry in lb:
-        entry['bets'] = db.get_bet(entry['name'])
     actual = db.get_actual_results()
 
     all_bets_raw = db.get_all_bets()

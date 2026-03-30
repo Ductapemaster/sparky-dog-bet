@@ -22,13 +22,33 @@ def _db_path():
 def _get_db():
     conn = sqlite3.connect(_db_path(), timeout=15.0)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     try:
         yield conn
         conn.commit()
     except Exception:
         conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+@contextmanager
+def _get_db_exclusive():
+    """Open a connection with BEGIN IMMEDIATE, acquiring the write lock before any reads.
+    Ensures the check-then-write in submit_bet is atomic across all Gunicorn workers."""
+    conn = sqlite3.connect(_db_path(), timeout=15.0, isolation_level=None)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        yield conn
+        conn.execute("COMMIT")
+    except Exception:
+        try:
+            conn.execute("ROLLBACK")
+        except Exception:
+            pass
         raise
     finally:
         conn.close()
@@ -41,6 +61,9 @@ def init_db():
 
     with _get_db() as conn:
         conn.executescript("""
+            PRAGMA journal_mode=WAL;
+            PRAGMA synchronous=NORMAL;
+
             CREATE TABLE IF NOT EXISTS guests (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
@@ -203,13 +226,16 @@ def submit_bet(name, phone4, breeds):
         seen.add(key)
 
     with _submit_lock:
-        # Re-check after acquiring lock to prevent double-tap race conditions
-        recheck = verify_guest(name, phone4)
-        if recheck['has_submitted']:
-            return {'success': False, 'error': 'You have already placed your bet.'}
+        # BEGIN IMMEDIATE acquires the write lock before reading, making the
+        # re-check + write atomic across all Gunicorn workers (not just threads).
+        with _get_db_exclusive() as conn:
+            row = conn.execute(
+                "SELECT has_submitted FROM guests WHERE name = ?", (str(name).strip(),)
+            ).fetchone()
+            if not row or row['has_submitted']:
+                return {'success': False, 'error': 'You have already placed your bet.'}
 
-        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        with _get_db() as conn:
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             for b in breeds:
                 conn.execute(
                     "INSERT INTO bets (guest_name, breed, percentage, submitted_at) VALUES (?, ?, ?, ?)",
@@ -331,6 +357,24 @@ def get_all_bets():
             }
             for r in rows
         ]
+
+
+def get_all_bets_for_scoring():
+    """Load all bets for submitted guests in one query. Returns {guest_name: [{breed, percentage}]}."""
+    with _get_db() as conn:
+        rows = conn.execute(
+            "SELECT b.guest_name, b.breed, b.percentage "
+            "FROM bets b "
+            "JOIN guests g ON g.name = b.guest_name "
+            "WHERE g.has_submitted = 1 "
+            "ORDER BY b.guest_name, b.percentage DESC"
+        ).fetchall()
+    bets_by_guest = {}
+    for row in rows:
+        bets_by_guest.setdefault(row['guest_name'], []).append(
+            {'breed': row['breed'], 'percentage': row['percentage']}
+        )
+    return bets_by_guest
 
 
 def add_bet_row(guest_name, breed, percentage):
