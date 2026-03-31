@@ -118,12 +118,15 @@ Ties broken by earlier `submitted_at` timestamp. Score kept to 1 decimal place.
 ## Key Conventions
 
 - `db.is_true(val)` normalises boolean config values
-- `_submit_lock` (threading.Lock) in `db.py` prevents same-process double-tap on submit
+- `_submit_lock` (threading.Lock) + `_get_db_exclusive()` (BEGIN IMMEDIATE) together prevent double-submission: the lock guards same-process threads; BEGIN IMMEDIATE makes the re-check + write atomic across all Gunicorn workers
 - `db._gallery_dir()` returns the gallery image directory (`data/gallery/` by default)
+- `db.get_all_bets_for_scoring()` loads all bets for submitted guests in a single JOIN query — used by `scoring.get_leaderboard()` to avoid N+1 queries
+- `_status()` in `routes.py` caches the result in Flask's `g` so config is read from SQLite only once per request, regardless of how many times `_status()` is called (context processor + route handlers both call it)
 - Config booleans toggle via `admin_toggle/<key>` — reads current, flips it, writes back
 - Guest name lookup uses a typeahead `<input list="...">` (not a `<select>`)
 - PIN (phone4) is always required at login — `RequirePin` config key is not exposed in UI
 - The `×` remove button on breed rows is hidden when only one row remains
+- `PRAGMA journal_mode=WAL` and `PRAGMA synchronous=NORMAL` are set once in `init_db()` and persist in the DB file — not set on every connection
 
 ## Development Workflow
 
@@ -149,8 +152,8 @@ docker compose logs -f web
 
 ## Deployment & Connectivity
 
-- DB and gallery images persist via a named Docker volume (`sparky_db` → `/app/data`)
-- **Tailscale Funnel**: expose port 9999 via Tailscale for HTTPS without Caddy
+- DB and gallery images persist via a bind mount (`./data` → `/app/data`) — copy the `data/` folder when moving the app to a new machine
+- **Cloudflare Tunnel**: public HTTPS exposure via `cloudflared` running as a Docker container alongside the app. No ports exposed to the internet, no home IP leaked. See `cloudflare-tunnel-setup.md` for configuration details.
 - Gunicorn runs 4 workers with a 60-second timeout
 
 ## Environment Variables (`.env`)

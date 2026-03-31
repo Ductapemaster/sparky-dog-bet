@@ -4,8 +4,8 @@
 
 - **Python 3.11** / **Flask 3.0** — web framework with Jinja2 templating
 - **SQLite** — database via Python's stdlib `sqlite3` (no ORM)
-- **Gunicorn** — WSGI server (2 workers)
-- **Docker** + **Docker Compose** — containerized deployment; SQLite file and gallery images persist via a named volume mounted at `/app/data`
+- **Gunicorn** — WSGI server (4 workers, 60s timeout)
+- **Docker** + **Docker Compose** — containerized deployment; SQLite file and gallery images persist via a bind mount at `./data` → `/app/data`
 
 ## Project Structure
 
@@ -41,7 +41,7 @@ python wsgi.py         # http://localhost:8000
 docker compose up -d --build
 ```
 
-The container binds to host port `9999` (mapped to gunicorn on `8000`). The `sparky_db` Docker volume persists the database and uploaded images across rebuilds.
+The container binds to host port `9999` (mapped to gunicorn on `8000`). The `./data` directory is bind-mounted into the container at `/app/data` — the database and uploaded gallery images live there and persist across rebuilds. Copy this folder when migrating to a new machine.
 
 ## Environment Variables
 
