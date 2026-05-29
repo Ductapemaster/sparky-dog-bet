@@ -443,6 +443,52 @@ def _gallery_dir():
     return os.path.join(os.path.dirname(os.path.abspath(_db_path())), 'gallery')
 
 
+def _thumbs_dir():
+    return os.path.join(_gallery_dir(), 'thumbs')
+
+
+def _display_dir():
+    return os.path.join(_gallery_dir(), 'display')
+
+
+def _thumb_filename(filename):
+    return os.path.splitext(filename)[0] + '.webp'
+
+_display_filename = _thumb_filename
+
+
+def generate_display(filename):
+    """Generate a 2048px WebP display version for the lightbox. Silent no-op on failure."""
+    try:
+        from PIL import Image, ImageOps
+        src = os.path.join(_gallery_dir(), filename)
+        display = _display_dir()
+        os.makedirs(display, exist_ok=True)
+        dst = os.path.join(display, _display_filename(filename))
+        with Image.open(src) as img:
+            img = ImageOps.exif_transpose(img)
+            img.thumbnail((2048, 2048), Image.LANCZOS)
+            img.save(dst, 'WEBP', quality=85)
+    except Exception:
+        pass
+
+
+def generate_thumbnail(filename):
+    """Generate a 400px WebP thumbnail for an uploaded gallery image. Silent no-op on failure."""
+    try:
+        from PIL import Image, ImageOps
+        src = os.path.join(_gallery_dir(), filename)
+        thumbs = _thumbs_dir()
+        os.makedirs(thumbs, exist_ok=True)
+        dst = os.path.join(thumbs, _thumb_filename(filename))
+        with Image.open(src) as img:
+            img = ImageOps.exif_transpose(img)
+            img.thumbnail((400, 400), Image.LANCZOS)
+            img.save(dst, 'WEBP', quality=75)
+    except Exception:
+        pass
+
+
 def get_all_gallery():
     """Full gallery rows including id and sort_order, for admin use."""
     with _get_db() as conn:
@@ -477,5 +523,15 @@ def delete_gallery_image(image_id):
         path = os.path.join(_gallery_dir(), row['file_id'])
         try:
             os.remove(path)
+        except OSError:
+            pass
+        thumb = os.path.join(_thumbs_dir(), _thumb_filename(row['file_id']))
+        try:
+            os.remove(thumb)
+        except OSError:
+            pass
+        display = os.path.join(_display_dir(), _display_filename(row['file_id']))
+        try:
+            os.remove(display)
         except OSError:
             pass

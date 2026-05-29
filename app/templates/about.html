@@ -34,7 +34,8 @@
 <div class="gallery-grid" style="margin-bottom:1.5rem;">
   {% for img in images %}
   <div class="gallery-item">
-    <img src="{{ url_for('main.gallery_img', filename=img.filename) }}"
+    <img src="{{ url_for('main.gallery_thumb', filename=img.filename) }}"
+         data-full="{{ url_for('main.gallery_img', filename=img.filename) }}"
          alt="Sparky" loading="lazy"
          class="gallery-thumb">
   </div>
@@ -94,7 +95,7 @@
 
   document.querySelectorAll('.gallery-thumb').forEach(function (img) {
     img.addEventListener('click', function () {
-      lbImg.src = img.src;
+      lbImg.src = img.dataset.full;
       lbImg.alt = img.alt;
       lb.classList.add('open');
       document.body.style.overflow = 'hidden';

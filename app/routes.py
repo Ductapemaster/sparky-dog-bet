@@ -33,7 +33,20 @@ def _require_admin():
 
 @bp.route('/gallery-img/<filename>')
 def gallery_img(filename):
-    return send_from_directory(db._gallery_dir(), filename, max_age=3600)
+    display_name = db._display_filename(filename)
+    display_dir  = db._display_dir()
+    if os.path.exists(os.path.join(display_dir, display_name)):
+        return send_from_directory(display_dir, display_name, max_age=86400, mimetype='image/webp')
+    return send_from_directory(db._gallery_dir(), filename, max_age=86400)
+
+
+@bp.route('/gallery-thumb/<filename>')
+def gallery_thumb(filename):
+    thumb_name = db._thumb_filename(filename)
+    thumbs_dir = db._thumbs_dir()
+    if os.path.exists(os.path.join(thumbs_dir, thumb_name)):
+        return send_from_directory(thumbs_dir, thumb_name, max_age=86400, mimetype='image/webp')
+    return send_from_directory(db._gallery_dir(), filename, max_age=86400)
 
 
 # ── Public pages ──────────────────────────────────────────────
@@ -393,6 +406,8 @@ def admin_gallery_upload():
                 candidate = f"{base}_{n}{ext}"
                 n += 1
             file.save(os.path.join(gallery_dir, candidate))
+            db.generate_thumbnail(candidate)
+            db.generate_display(candidate)
             try:
                 db.add_gallery_image(candidate)
             except ValueError:
