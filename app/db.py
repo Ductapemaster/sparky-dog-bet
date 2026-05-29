@@ -218,9 +218,12 @@ def submit_bet(name, phone4, breeds):
     if total != 100:
         return {'success': False, 'error': f'Percentages must add up to exactly 100%. Current total: {total}%.'}
 
+    valid_breeds = {b.lower() for b in get_breeds()}
     seen = set()
     for b in breeds:
         key = b['breed'].lower()
+        if key not in valid_breeds:
+            return {'success': False, 'error': f'"{b["breed"]}" is not a recognized breed. Please select from the list.'}
         if key in seen:
             return {'success': False, 'error': f'"{b["breed"]}" appears more than once. Combine them into one row.'}
         seen.add(key)
