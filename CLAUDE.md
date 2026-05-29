@@ -27,7 +27,8 @@ scored against his real DNA test results. Hosted on Dan's home server via Docker
 | GET | `/gallery` | Photo gallery |
 | GET | `/about` | About Sparky page with photo gallery |
 | GET | `/leaderboard` | Public leaderboard (placeholder until results revealed) |
-| GET | `/gallery-img/<filename>` | Serve uploaded gallery image from `data/gallery/` |
+| GET | `/gallery-thumb/<filename>` | Serve 400px WebP thumbnail from `data/gallery/thumbs/` (fallback: original) |
+| GET | `/gallery-img/<filename>` | Serve 2048px WebP display image from `data/gallery/display/` (fallback: original) |
 | GET | `/bet` | Bet flow (identity lookup → form → submitted view) |
 | POST | `/bet/verify` | Verify guest identity, set session |
 | POST | `/bet/submit` | Submit bet |
@@ -76,9 +77,26 @@ Database is created and seeded automatically on startup via `db.init_db()`:
 ## Gallery Images
 
 Images are uploaded via the admin panel and stored at `data/gallery/` (inside the Docker
-volume, so they persist across rebuilds). Served at `/gallery-img/<filename>`. Deleting a
-photo from the admin also removes the file from disk. Supported formats: jpg, jpeg, png,
-gif, webp. Order is set via drag-and-drop in the admin Gallery tab.
+volume, so they persist across rebuilds). Supported formats: jpg, jpeg, png, gif, webp.
+Order is set via drag-and-drop in the admin Gallery tab.
+
+On upload, two derived sizes are generated automatically via `db.generate_thumbnail()` and
+`db.generate_display()`. Deleting a photo also removes both derived files.
+
+| Path | Max dimension | Format | Quality | Route | Use |
+|------|--------------|--------|---------|-------|-----|
+| `data/gallery/thumbs/{stem}.webp` | 400px | WebP | 75 | `/gallery-thumb/` | Gallery grid |
+| `data/gallery/display/{stem}.webp` | 2048px | WebP | 85 | `/gallery-img/` | Lightbox |
+| `data/gallery/{original}` | — | original | — | fallback only | Never served directly |
+
+Both routes set `Cache-Control: public, max-age=86400` and fall back to the original if the
+derived file doesn't exist. The gallery template uses `src` → thumbnail and `data-full` →
+display URL; the lightbox reads `img.dataset.full` on click.
+
+To backfill derived images for existing uploads (idempotent — skips files that already exist):
+```bash
+docker exec sparky-dog-bet-web-1 python generate_thumbnails.py
+```
 
 ## Admin Panel
 
@@ -120,8 +138,9 @@ Ties broken by earlier `submitted_at` timestamp. Score kept to 1 decimal place.
 - `db.is_true(val)` normalises boolean config values
 - `_submit_lock` (threading.Lock) + `_get_db_exclusive()` (BEGIN IMMEDIATE) together prevent double-submission: the lock guards same-process threads; BEGIN IMMEDIATE makes the re-check + write atomic across all Gunicorn workers
 - `db._gallery_dir()` returns the gallery image directory (`data/gallery/` by default)
-- `db.get_all_bets_for_scoring()` loads all bets for submitted guests in a single JOIN query — used by `scoring.get_leaderboard()` to avoid N+1 queries
-- `_status()` in `routes.py` caches the result in Flask's `g` so config is read from SQLite only once per request, regardless of how many times `_status()` is called (context processor + route handlers both call it)
+- `db._thumbs_dir()` / `db._display_dir()` — derived image subdirectories
+- `db._thumb_filename(f)` / `db._display_filename(f)` — converts any filename to `{stem}.webp`
+- `db.generate_thumbnail(f)` / `db.generate_display(f)` — silent no-op on failure (won't crash upload if Pillow fails)
 - Config booleans toggle via `admin_toggle/<key>` — reads current, flips it, writes back
 - Guest name lookup uses a typeahead `<input list="...">` (not a `<select>`)
 - PIN (phone4) is always required at login — `RequirePin` config key is not exposed in UI
@@ -152,9 +171,22 @@ docker compose logs -f web
 
 ## Deployment & Connectivity
 
-- DB and gallery images persist via a bind mount (`./data` → `/app/data`) — copy the `data/` folder when moving the app to a new machine
-- **Cloudflare Tunnel**: public HTTPS exposure via `cloudflared` running as a Docker container alongside the app. No ports exposed to the internet, no home IP leaked. See `cloudflare-tunnel-setup.md` for configuration details.
-- Gunicorn runs 4 workers with a 60-second timeout
+- DB and gallery images persist via a named Docker volume (`sparky_db` → `/app/data`)
+- Container binds to host port **9999** → gunicorn on 8000
+- **Cloudflare Tunnel**: a `cloudflared` container on the host routes `sparky.koubalabs.com`
+  → `http://localhost:9999`. Configured via Cloudflare Zero Trust dashboard (token-based,
+  no local ingress config file).
+- **Cloudflare Cache Rule**: zone `koubalabs.com` has a cache rule matching
+  `(starts_with(http.request.uri.path, "/gallery-thumb/")) or (starts_with(http.request.uri.path, "/gallery-img/"))`
+  → Eligible for cache, Edge TTL override 1 day. Verify with:
+  ```bash
+  curl -sI https://sparky.koubalabs.com/gallery-thumb/Bowtie.webp | grep cf-cache-status
+  # → HIT on second request
+  ```
+- **Gunicorn**: gevent worker class, 2 workers, 100 connections each, 60s timeout.
+  Switching from 4 sync workers to 2 gevent workers handles concurrent image requests
+  without blocking — less critical now that images are edge-cached, but still improves
+  non-image route concurrency.
 
 ## Environment Variables (`.env`)
 
