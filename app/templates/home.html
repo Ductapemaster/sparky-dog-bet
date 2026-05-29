@@ -23,57 +23,8 @@
   </a>
 </div>
 
-<div style="margin-top:2rem; text-align:center; color:var(--muted); font-size:0.85rem;">
+<div style="margin-top:2rem; text-align:center; color:var(--text); font-size:0.85rem;">
   Questions? Find Dan, Zoe, or Carly at the party.
 </div>
 
-<style>
-  .path-cards {
-    display: flex;
-    align-items: stretch;
-    gap: 0;
-    margin-top: 0.5rem;
-  }
-
-  .path-divider {
-    display: flex;
-    align-items: center;
-    padding: 0 1.25rem;
-    color: var(--muted);
-    font-size: 0.9rem;
-    font-style: italic;
-    flex-shrink: 0;
-  }
-
-  .path-card {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 2rem 1.5rem;
-    background: var(--card);
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text);
-    text-decoration: none;
-    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
-  }
-  .path-card:hover {
-    border-color: var(--primary);
-    box-shadow: var(--shadow);
-    transform: translateY(-2px);
-    text-decoration: none;
-    color: var(--text);
-  }
-.path-card-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
-  .path-card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; }
-  .path-card-desc { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
-
-  @media (max-width: 480px) {
-    .path-cards { flex-direction: column; gap: 0.75rem; }
-    .path-divider { justify-content: center; padding: 0; }
-    .path-card { padding: 1.5rem 1.25rem; }
-  }
-</style>
 {% endblock %}

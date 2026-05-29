@@ -18,25 +18,27 @@
         <th>#</th>
         <th>Name</th>
         <th style="text-align:right;">Points Off</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
       {% for entry in leaderboard %}
-      <tr class="lb-row" onclick="toggleRow({{ loop.index }})" style="cursor:pointer;">
+      <tr class="lb-row" onclick="toggleRow({{ loop.index }})">
         <td class="rank" style="white-space:nowrap;">{{ loop.index }}{% if loop.first %} 🏆{% elif loop.last and leaderboard|length > 1 %} 💩{% endif %}</td>
         <td>{{ entry.name }}</td>
         <td style="text-align:right;">{{ entry.score }}</td>
+        <td class="lb-toggle" id="lb-toggle-{{ loop.index }}">▼</td>
       </tr>
       <tr id="lb-detail-{{ loop.index }}" style="display:none;">
-        <td colspan="3" style="padding:0; border-top:none;">
+        <td colspan="4" style="padding:0; border-top:none;">
           <div style="background:var(--primary-pale); padding:0.75rem 1rem 0.75rem 1rem; border-radius:0 0 4px 4px;">
-            <table style="width:100%;">
+            <table class="detail-table" style="width:100%;">
               <thead>
                 <tr>
                   <th style="font-weight:600; padding-bottom:0.4rem;">Breed</th>
                   <th style="text-align:right; font-weight:600; padding-bottom:0.4rem;">Guess</th>
                   <th style="text-align:right; font-weight:600; padding-bottom:0.4rem;">Actual</th>
-                  <th style="text-align:right; font-weight:600; padding-bottom:0.4rem;">Points Off</th>
+                  <th style="text-align:right; font-weight:600; padding-bottom:0.4rem;">Pts</th>
                 </tr>
               </thead>
               <tbody>
@@ -44,22 +46,22 @@
                 {% for b in entry.bets %}
                 <tr>
                   <td>{{ b.breed }}</td>
-                  <td style="text-align:right;">{{ b.percentage }}%</td>
-                  <td style="text-align:right;">{{ actual.get(b.breed, 0) | int }}%</td>
-                  <td style="text-align:right;">{{ (b.percentage - actual.get(b.breed, 0)) | abs | int }}</td>
+                  <td data-label="Guess" style="text-align:right;">{{ b.percentage }}%</td>
+                  <td data-label="Actual" style="text-align:right;">{{ actual.get(b.breed, 0) | int }}%</td>
+                  <td data-label="Off" style="text-align:right;">{{ (b.percentage - actual.get(b.breed, 0)) | abs | int }}</td>
                 </tr>
                 {% endfor %}
                 {% for breed, pct in actual.items() %}
                 {% if breed not in guessed %}
                 <tr>
-                  <td style="color:var(--muted);">{{ breed }}</td>
-                  <td style="text-align:right; color:var(--muted);">—</td>
-                  <td style="text-align:right;">{{ pct | int }}%</td>
-                  <td style="text-align:right; color:var(--muted);">{{ pct | int }}</td>
+                  <td>{{ breed }}</td>
+                  <td data-label="Guess" style="text-align:right; color:var(--text);">—</td>
+                  <td data-label="Actual" style="text-align:right;">{{ pct | int }}%</td>
+                  <td data-label="Off" style="text-align:right; color:var(--text);">{{ pct | int }}</td>
                 </tr>
                 {% endif %}
                 {% endfor %}
-                <tr style="font-weight:700; border-top:2px solid var(--border);">
+                <tr class="score-row" style="font-weight:700; border-top:2px solid var(--border);">
                   <td colspan="3">Score</td>
                   <td style="text-align:right;">{{ entry.score }} pts off</td>
                 </tr>
@@ -79,8 +81,11 @@
 
 <script>
   function toggleRow(i) {
-    var row = document.getElementById('lb-detail-' + i);
-    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+    var row    = document.getElementById('lb-detail-' + i);
+    var toggle = document.getElementById('lb-toggle-' + i);
+    var open   = row.style.display === 'none';
+    row.style.display  = open ? 'table-row' : 'none';
+    toggle.textContent = open ? '▲' : '▼';
   }
 </script>
 {% endblock %}

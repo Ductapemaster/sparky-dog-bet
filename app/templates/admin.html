@@ -130,8 +130,8 @@
                     {% for breed, pct in actual.items() %}
                     {% if breed not in guessed %}
                     <tr>
-                      <td style="color:var(--muted);">{{ breed }}</td>
-                      <td style="text-align:right; color:var(--muted);">—</td>
+                      <td style="color:var(--text);">{{ breed }}</td>
+                      <td style="text-align:right; color:var(--text);">—</td>
                       <td style="text-align:right;">{{ pct | int }}%</td>
                     </tr>
                     {% endif %}
@@ -262,7 +262,7 @@
                   padding:0.55rem 0.75rem; cursor:pointer; background:var(--card);"
            onclick="toggleBetGroup({{ loop.index }})">
         <div style="display:flex; align-items:center; gap:0.5rem;">
-          <span id="bgchev-{{ loop.index }}" style="font-size:0.7rem; color:var(--muted);">▶</span>
+          <span id="bgchev-{{ loop.index }}" style="font-size:0.7rem; color:var(--text);">▶</span>
           <strong>{{ group.guest_name }}</strong>
           <span class="muted" style="font-size:0.8rem;">{{ group.bets|length }} breed{{ 's' if group.bets|length != 1 }}</span>
         </div>
@@ -727,7 +727,7 @@
 <style>
   .admin-sh {
     font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.75rem;
+    letter-spacing: 0.06em; color: var(--text); margin-bottom: 0.75rem;
   }
   .btn-sm { font-size: 0.8rem; padding: 0.28rem 0.6rem; }
   .btn-icon { padding: 0.28rem 0.45rem; line-height: 1; }
