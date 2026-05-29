@@ -52,9 +52,9 @@
       <div class="stat-num">{{ total }}</div>
       <div class="stat-lbl">Total Guests</div>
     </div>
-    <div class="stat-box" style="border-color:#f5c542; background:#fef9e7;">
-      <div class="stat-num" style="color:#b45309;">{{ total - submitted }}</div>
-      <div class="stat-lbl" style="color:#b45309;">Remaining</div>
+    <div class="stat-box" style="border-color:rgba(251,191,122,0.4); background:rgba(180,83,9,0.15);">
+      <div class="stat-num" style="color:#fbbf7a;">{{ total - submitted }}</div>
+      <div class="stat-lbl" style="color:#fbbf7a;">Remaining</div>
     </div>
   </div>
 
@@ -353,7 +353,7 @@
   </div>
 
   <div class="card danger-zone" style="margin-bottom:2rem;">
-    <h3 class="admin-sh" style="color:#c0392b;">⚠ Danger Zone</h3>
+    <h3 class="admin-sh" style="color:var(--error-text);">⚠ Danger Zone</h3>
     <strong>Wipe All Bets</strong>
     <p class="muted" style="margin:0.25rem 0 0.75rem; font-size:0.85rem;">
       Deletes <em>every</em> submitted bet and resets all guests to "not submitted".
@@ -367,7 +367,7 @@
       </button>
     </div>
     <div id="wipe-2" style="display:none;">
-      <p style="color:#c0392b; font-weight:700; margin:0 0 0.5rem;">
+      <p style="color:var(--error-text); font-weight:700; margin:0 0 0.5rem;">
         Are you absolutely sure? ALL bets will be permanently deleted.
       </p>
       <form method="post" action="{{ url_for('main.admin_wipe_all_bets') }}" style="display:inline;">

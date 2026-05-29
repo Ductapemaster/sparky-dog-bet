@@ -11,7 +11,7 @@
 </div>
 {% else %}
 <div class="card">
-  <p class="muted" style="font-size:0.85rem; margin-bottom:1rem;">Score is how many percentage points off you are across all breeds — lowest score wins. Breeds not guessed count as 0%. Tap any row to see that person's full breakdown.</p>
+  <p class="muted" style="margin-bottom:1rem;">Score is how many percentage points off you are across all breeds — lowest score wins. Breeds not guessed count as 0%. Tap any row to see that person's full breakdown.</p>
   <table>
     <thead>
       <tr>
@@ -30,7 +30,7 @@
       <tr id="lb-detail-{{ loop.index }}" style="display:none;">
         <td colspan="3" style="padding:0; border-top:none;">
           <div style="background:var(--primary-pale); padding:0.75rem 1rem 0.75rem 1rem; border-radius:0 0 4px 4px;">
-            <table style="width:100%; font-size:0.85rem;">
+            <table style="width:100%;">
               <thead>
                 <tr>
                   <th style="font-weight:600; padding-bottom:0.4rem;">Breed</th>
@@ -71,7 +71,7 @@
       {% endfor %}
     </tbody>
   </table>
-  <p class="muted" style="font-size:0.8rem; margin-top:0.75rem;">
+  <p class="muted" style="margin-top:0.75rem;">
     Ties broken by submission time.
   </p>
 </div>
