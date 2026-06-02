@@ -23,7 +23,7 @@
     </thead>
     <tbody>
       {% for entry in leaderboard %}
-      <tr class="lb-row" onclick="toggleRow({{ loop.index }})">
+      <tr class="lb-row {{ 'lb-winner' if loop.first }}" onclick="toggleRow({{ loop.index }})">
         <td class="rank" style="white-space:nowrap;">{{ loop.index }}{% if loop.first %} 🏆{% elif loop.last and leaderboard|length > 1 %} 💩{% endif %}</td>
         <td>{{ entry.name }}</td>
         <td style="text-align:right;">{{ entry.score }}</td>
@@ -55,9 +55,9 @@
                 {% if breed not in guessed %}
                 <tr>
                   <td>{{ breed }}</td>
-                  <td data-label="Guess" style="text-align:right; color:var(--text);">—</td>
+                  <td data-label="Guess" style="text-align:right; color:var(--muted);">—</td>
                   <td data-label="Actual" style="text-align:right;">{{ pct | int }}%</td>
-                  <td data-label="Off" style="text-align:right; color:var(--text);">{{ pct | int }}</td>
+                  <td data-label="Off" style="text-align:right; color:var(--muted);">{{ pct | int }}</td>
                 </tr>
                 {% endif %}
                 {% endfor %}

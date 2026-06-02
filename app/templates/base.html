@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#092135">
+  <meta name="theme-color" content="#faf9f6">
   <title>{% block title %}Sparky's DNA Bet 🐾{% endblock %}</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐾</text></svg>">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -14,11 +14,14 @@
     <div class="nav-links">
       {% block nav_links %}
       <a href="{{ url_for('main.about') }}"
-         class="nav-link {{ 'active' if request.endpoint in ('main.about','main.gallery') }}">About Sparky</a>
+         class="nav-link {{ 'active' if request.endpoint in ('main.about','main.gallery') }}"
+         data-label="About Sparky">About Sparky</a>
       <a href="{{ url_for('main.bet') }}"
-         class="nav-link {{ 'active' if request.endpoint in ('main.bet','main.bet_verify','main.bet_submit') }}">{% if nav_status.locked %}🔒 {% endif %}Place My Bet</a>
+         class="nav-link {{ 'active' if request.endpoint in ('main.bet','main.bet_verify','main.bet_submit') }}"
+         data-label="{% if nav_status.locked %}🔒 {% endif %}Place My Bet">{% if nav_status.locked %}🔒 {% endif %}Place My Bet</a>
       <a href="{{ url_for('main.leaderboard') }}"
-         class="nav-link {{ 'active' if request.endpoint == 'main.leaderboard' }}">Leaderboard</a>
+         class="nav-link {{ 'active' if request.endpoint == 'main.leaderboard' }}"
+         data-label="Leaderboard">Leaderboard</a>
       {% endblock %}
     </div>
     <a href="https://wedding.koubalabs.com" class="nav-link-home"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Wedding Home</a>

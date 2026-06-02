@@ -12,19 +12,23 @@
 <div class="path-cards">
   <a href="{{ url_for('main.about') }}" class="path-card">
     <div class="path-card-icon">🐕</div>
-    <div class="path-card-title">About Sparky</div>
-    <div class="path-card-desc">Meet the pup, see his photos, and study the evidence before you guess.</div>
+    <div class="path-card-body">
+      <div class="path-card-title">About Sparky</div>
+      <div class="path-card-desc">Meet the pup, see his photos, and study the evidence before you guess.</div>
+    </div>
   </a>
   <div class="path-divider">or</div>
-  <a href="{{ url_for('main.bet') }}" class="path-card">
+  <a href="{{ url_for('main.bet') }}" class="path-card path-card--primary">
     <div class="path-card-icon">{% if nav_status.locked %}🔒{% else %}🎯{% endif %}</div>
-    <div class="path-card-title">{% if nav_status.locked %}Betting Closed{% else %}Place My Bet{% endif %}</div>
-    <div class="path-card-desc">{% if nav_status.locked %}Betting is locked. Check back for the reveal at the Reception Dinner!{% else %}Ready to guess? Pick your breeds, assign percentages, and submit your $1 entry.{% endif %}</div>
+    <div class="path-card-body">
+      <div class="path-card-title">{% if nav_status.locked %}Betting Closed{% else %}Place My Bet{% endif %}</div>
+      <div class="path-card-desc">{% if nav_status.locked %}Betting is locked. Check back for the reveal at the Reception Dinner!{% else %}Ready to guess? Pick your breeds, assign percentages, and submit your $1 entry.{% endif %}</div>
+    </div>
   </a>
 </div>
 
 <div style="margin-top:2rem; text-align:center; color:var(--text); font-size:0.85rem;">
-  Questions? Find Dan, Zoe, or Carly at the party.
+  Questions? Head to the betting station!
 </div>
 
 {% endblock %}
