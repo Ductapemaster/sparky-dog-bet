@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="section-title">{% if show_submitted %}Bet Placed{% else %}Place My Bet{% endif %}</h2>
+<h2 class="section-title">{% if show_submitted %}Bet Placed{% elif editing %}Edit My Bet{% else %}Place My Bet{% endif %}</h2>
 
 {# ── Submitted — read-only view ── #}
 {% if show_submitted %}
@@ -30,6 +30,12 @@
     <div class="muted" style="font-size:0.8rem;">{{ guest.submitted_at or '' }}</div>
   </div>
 </div>
+{% endif %}
+
+{% if not status.locked and not status.revealed %}
+<a href="{{ url_for('main.bet') }}?edit=1" class="btn btn-secondary btn-full" style="margin-bottom:1.25rem;">
+  Edit My Bet
+</a>
 {% endif %}
 
 <div class="card" style="margin-bottom:1.25rem;">
@@ -157,10 +163,10 @@
 <div class="card" style="margin-bottom:1.25rem;">
   <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">The Rules</h3>
   <ul style="padding-left:1.25rem; line-height:2;">
-    <li>Entry fee: <strong>$1 per person</strong> (cash to Dan, Zoe, or Carly)</li>
+    <li>Entry fee: <strong>$1 per person</strong> (drop your dollar in the cashbox at the betting station, or Venmo <a href="https://venmo.com/u/Dan-Kouba">@Dan-Kouba</a>)</li>
     <li>Select one or more breeds and assign a percentage to each (a single breed can be 100%)</li>
     <li>Your percentages must add up to exactly <strong>100%</strong></li>
-    <li>One entry per guest — no changes after you submit</li>
+    <li>One entry per guest — you can edit it any time until betting closes</li>
     <li>Ties broken by who submitted first</li>
   </ul>
 </div>
@@ -175,8 +181,8 @@
 
 {% if show_form %}
 <div class="card">
-  <p class="muted" style="margin-bottom:1rem;">
-    Placing bet for <strong>{{ guest.name }}</strong>.
+  <p style="margin-bottom:1rem;">
+    {% if editing %}Editing bet for{% else %}Placing bet for{% endif %} <strong>{{ guest.name }}</strong>.
     Assign percentages to one or more breeds — they must add up to exactly <strong>100%</strong>.
   </p>
 
@@ -185,6 +191,7 @@
   {% endif %}
 
   <form method="post" action="{{ url_for('main.bet_submit') }}" id="bet-form">
+    {% if editing %}<input type="hidden" name="editing" value="1">{% endif %}
     <div id="breed-rows">
       {% if submitted_breeds %}
         {% for b in submitted_breeds %}
@@ -239,18 +246,25 @@
     </div>
 
     <button type="submit" class="btn btn-primary btn-full" id="btn-submit" disabled>
-      <span id="btn-submit-label">Submit My Bet</span>
+      <span id="btn-submit-label">{% if editing %}Update My Bet{% else %}Submit My Bet{% endif %}</span>
       <span class="spinner" id="btn-submit-spinner" style="display:none;"></span>
     </button>
+    {% if editing %}
+    <a href="{{ url_for('main.bet') }}" class="btn btn-secondary btn-full" style="margin-top:0.75rem;">Cancel</a>
+    <p class="muted" style="margin-top:0.75rem; font-size:0.85rem; text-align:center;">
+      You can keep editing your bet until betting closes.
+    </p>
+    {% else %}
     <p class="muted" style="margin-top:0.75rem; font-size:0.85rem; text-align:center;">
       ⚠️ You can only submit once. Double-check before hitting Submit.
     </p>
+    {% endif %}
   </form>
 </div>
 
 {% else %}
 <div class="card">
-  <p class="muted" style="margin-bottom:1.25rem;">
+  <p style="margin-bottom:1.25rem;">
     Find your name to place your bet or view a previously submitted bet.
   </p>
 

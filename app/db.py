@@ -201,11 +201,11 @@ def get_all_guests():
 
 # ── Bets ──────────────────────────────────────────────────────
 
-def submit_bet(name, phone4, breeds):
+def submit_bet(name, phone4, breeds, replace=False):
     verification = verify_guest(name, phone4)
     if not verification['verified']:
         return {'success': False, 'error': verification['error']}
-    if verification['has_submitted']:
+    if verification['has_submitted'] and not replace:
         return {'success': False, 'error': 'You have already placed your bet.'}
 
     if is_true(get_config('BettingLocked')):
@@ -235,8 +235,13 @@ def submit_bet(name, phone4, breeds):
             row = conn.execute(
                 "SELECT has_submitted FROM guests WHERE name = ?", (str(name).strip(),)
             ).fetchone()
-            if not row or row['has_submitted']:
+            if not row:
                 return {'success': False, 'error': 'You have already placed your bet.'}
+            if row['has_submitted']:
+                if not replace:
+                    return {'success': False, 'error': 'You have already placed your bet.'}
+                # Editing an existing bet — clear the old rows before re-inserting.
+                conn.execute("DELETE FROM bets WHERE guest_name = ?", (str(name).strip(),))
 
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             for b in breeds:

@@ -83,6 +83,11 @@ def bet():
 
     if guest and guest.get('verified'):
         if guest.get('has_submitted'):
+            if request.args.get('edit') and not status['locked'] and not status['revealed']:
+                return render_template('bet.html',
+                    show_form=True, editing=True, guest=guest,
+                    breeds=db.get_breeds(), status=status,
+                    submitted_breeds=db.get_bet(guest['name']))
             bet_rows = db.get_bet(guest['name'])
             if not bet_rows:
                 # No bet rows in DB — session is stale (e.g. from a prior app version).
@@ -158,6 +163,7 @@ def bet_submit():
     if not guest or not guest.get('verified'):
         return redirect(url_for('main.bet'))
 
+    editing = request.form.get('editing') == '1'
     breed_names = request.form.getlist('breed[]')
     percentages = request.form.getlist('percentage[]')
     breeds = [
@@ -165,10 +171,10 @@ def bet_submit():
         for b, p in zip(breed_names, percentages) if b.strip()
     ]
 
-    result = db.submit_bet(guest['name'], guest['phone4'], breeds)
+    result = db.submit_bet(guest['name'], guest['phone4'], breeds, replace=editing)
     if not result['success']:
         return render_template('bet.html',
-            show_form=True, guest=guest,
+            show_form=True, editing=editing, guest=guest,
             breeds=db.get_breeds(), status=_status(),
             error=result['error'], submitted_breeds=breeds)
 

@@ -116,6 +116,14 @@ background `fetch` (AJAX) without a full page reload, except file uploads.
 To reset a guest's bet (let them re-submit): Bets tab → guest group → wipe button (yellow).
 This deletes their bet rows and clears `has_submitted`.
 
+Guests can also self-edit their bet without admin help: the submitted ("Bet Placed")
+view shows an **Edit My Bet** button (hidden once betting is locked or results are
+revealed) linking to `/bet?edit=1`, which re-renders the form pre-filled with their
+current rows. Submitting in edit mode posts a hidden `editing=1` flag; `bet_submit`
+calls `db.submit_bet(..., replace=True)`, which deletes the old rows and re-inserts,
+refreshing `submitted_at` to the edit time (so an edit counts as a fresh entry for
+tie-breaks). The `BettingLocked` check inside `submit_bet` enforces the edit window.
+
 ## Session
 
 - `session['guest']` — set after `/bet/verify`
