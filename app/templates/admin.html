@@ -52,9 +52,9 @@
       <div class="stat-num">{{ total }}</div>
       <div class="stat-lbl">Total Guests</div>
     </div>
-    <div class="stat-box" style="border-color:rgba(251,191,122,0.4); background:rgba(180,83,9,0.15);">
-      <div class="stat-num" style="color:#fbbf7a;">{{ total - submitted }}</div>
-      <div class="stat-lbl" style="color:#fbbf7a;">Remaining</div>
+    <div class="stat-box" style="border-color:rgba(180,83,9,0.45); background:rgba(180,83,9,0.12);">
+      <div class="stat-num" style="color:#92400e;">{{ total - submitted }}</div>
+      <div class="stat-lbl" style="color:#92400e;">Remaining</div>
     </div>
   </div>
 
@@ -85,91 +85,32 @@
   </div>
 
   <div class="card" style="margin-bottom:1.5rem;">
-    <h3 class="admin-sh">Leaderboard</h3>
-    {% if not has_actual %}
-    <div class="alert alert-info">Add actual DNA results in the Results tab to see scores.</div>
-    {% elif leaderboard %}
-      {% if not status.revealed %}
-      <div class="alert alert-info" style="margin-bottom:0.75rem;">
-        Results are hidden from guests. Click "Reveal Results" above to show them.
-      </div>
-      {% endif %}
-      <p class="muted" style="font-size:0.85rem; margin-bottom:1rem;">Tap any row to see that person's full guess breakdown.</p>
-      <table>
-        <thead>
-          <tr><th>#</th><th>Name</th><th style="text-align:right;">Score</th><th>Submitted</th></tr>
-        </thead>
-        <tbody>
-          {% for entry in leaderboard %}
-          <tr style="cursor:pointer;" onclick="toggleAdminRow({{ loop.index }})">
-            <td class="rank" style="white-space:nowrap;">{{ loop.index }}{% if loop.first %} 🏆{% elif loop.last and leaderboard|length > 1 %} 💩{% endif %}</td>
-            <td>{{ entry.name }}</td>
-            <td style="text-align:right;">{{ entry.score }}</td>
-            <td class="muted" style="font-size:0.85rem;">{{ entry.submitted_at or '—' }}</td>
-          </tr>
-          <tr id="alb-{{ loop.index }}" style="display:none;">
-            <td colspan="4" style="padding:0; border-top:none;">
-              <div style="background:var(--primary-pale); padding:0.75rem 1rem;">
-                <table style="width:100%; font-size:0.85rem;">
-                  <thead>
-                    <tr>
-                      <th style="padding-bottom:0.4rem;">Breed</th>
-                      <th style="text-align:right; padding-bottom:0.4rem;">Guess</th>
-                      <th style="text-align:right; padding-bottom:0.4rem;">Actual</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% set guessed = entry.bets | map(attribute='breed') | list %}
-                    {% for b in entry.bets %}
-                    <tr>
-                      <td>{{ b.breed }}</td>
-                      <td style="text-align:right;">{{ b.percentage }}%</td>
-                      <td style="text-align:right;">{{ actual.get(b.breed, 0) | int }}%</td>
-                    </tr>
-                    {% endfor %}
-                    {% for breed, pct in actual.items() %}
-                    {% if breed not in guessed %}
-                    <tr>
-                      <td style="color:var(--text);">{{ breed }}</td>
-                      <td style="text-align:right; color:var(--text);">—</td>
-                      <td style="text-align:right;">{{ pct | int }}%</td>
-                    </tr>
-                    {% endif %}
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      <p class="muted" style="font-size:0.8rem; margin-top:0.75rem;">
-        Lower score = closer to actual results. Ties broken by submission time.
-      </p>
-    {% else %}
-    <p class="muted">No bets submitted yet.</p>
-    {% endif %}
-  </div>
-
-  <div class="card" style="margin-bottom:1.5rem;">
-    <h3 class="admin-sh">Guest Submission Status</h3>
-    <table>
+    <div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; flex-wrap:wrap;">
+      <h3 class="admin-sh" style="margin-bottom:0;">Guest Submission Status</h3>
+      <span class="muted" style="font-size:0.85rem;">
+        {% if total - submitted > 0 %}
+        <strong style="color:#92400e;">{{ total - submitted }}</strong> still to submit
+        {% else %}
+        All {{ total }} submitted 🎉
+        {% endif %}
+      </span>
+    </div>
+    <table class="status-table" style="margin-top:0.75rem;">
       <thead>
         <tr><th>Name</th><th>Status</th><th>Time</th></tr>
       </thead>
       <tbody>
         {% for g in guests %}
         <tr>
-          <td>{{ g.name }}</td>
-          <td>
+          <td data-label="Name">{{ g.name }}</td>
+          <td data-label="Status" style="white-space:nowrap;">
             {% if g.has_submitted %}
             <span class="badge badge-green">✓ Submitted</span>
             {% else %}
             <span class="badge badge-muted">Pending</span>
             {% endif %}
           </td>
-          <td class="muted" style="font-size:0.85rem;">{{ g.submitted_at or '—' }}</td>
+          <td data-label="Time" class="muted" style="font-size:0.85rem;">{{ g.submitted_at or '—' }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -185,26 +126,30 @@
 
   <div class="card" style="margin-bottom:1.5rem;">
     <h3 class="admin-sh">Guests</h3>
-    <table>
+    <input type="search" id="guest-filter" placeholder="🔍 Filter guests by name…"
+           oninput="filterGuests(this.value)" autocomplete="off"
+           style="width:100%; margin-bottom:0.75rem;">
+    <table class="guests-table">
       <thead>
         <tr><th>Name</th><th>PIN</th><th>Status</th><th>Submitted</th><th style="text-align:right;"></th></tr>
       </thead>
       <tbody>
         {% for g in guests %}
-        <tr>
-          <td>{{ g.name }}</td>
-          <td class="muted">{{ g.phone4 or '—' }}</td>
-          <td>
+        <tr class="guest-row" data-name="{{ g.name | lower }}" data-gid="{{ g.id }}"
+            onclick="toggleGuest(this, event)">
+          <td data-label="Name"><span class="guest-chev" aria-hidden="true">›</span>{{ g.name }}</td>
+          <td data-label="PIN" class="muted">{{ g.phone4 or '—' }}</td>
+          <td data-label="Status" style="white-space:nowrap;">
             {% if g.has_submitted %}
             <span class="badge badge-green">✓ Submitted</span>
             {% else %}
             <span class="badge badge-muted">Pending</span>
             {% endif %}
           </td>
-          <td class="muted" style="font-size:0.85rem;">{{ g.submitted_at or '—' }}</td>
-          <td style="white-space:nowrap; text-align:right;">
+          <td data-label="Submitted" class="muted" style="font-size:0.85rem;">{{ g.submitted_at or '—' }}</td>
+          <td class="guest-actions" style="white-space:nowrap; text-align:right;">
             <button type="button" class="btn btn-secondary btn-sm btn-icon"
-                    title="Edit" onclick="toggleRow('eg{{ g.id }}')">
+                    title="Edit" onclick="toggleGuestEdit({{ g.id }}, event)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
             <form method="post" action="{{ url_for('main.admin_guests_delete', guest_id=g.id) }}"
@@ -225,7 +170,7 @@
                      maxlength="4" style="width:80px;">
               <button type="submit" class="btn btn-primary btn-sm">Save</button>
               <button type="button" class="btn btn-secondary btn-sm"
-                      onclick="toggleRow('eg{{ g.id }}')">Cancel</button>
+                      onclick="toggleGuestEdit({{ g.id }}, event)">Cancel</button>
             </form>
           </td>
         </tr>
@@ -600,11 +545,6 @@
     }
   })();
 
-  function toggleAdminRow(i) {
-    var row = document.getElementById('alb-' + i);
-    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
-  }
-
   function toggleBetEdit(id) {
     var row = document.getElementById('bet-edit-' + id);
     row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
@@ -621,6 +561,30 @@
   function toggleAddBreed(i) {
     var el = document.getElementById('bgadd-' + i);
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function toggleGuest(row, e) {
+    if (e && e.target.closest('button, a, form, input, select')) return;
+    row.classList.toggle('expanded');
+  }
+
+  function toggleGuestEdit(gid, e) {
+    if (e) e.stopPropagation();
+    var form    = document.getElementById('eg' + gid);
+    var row     = document.querySelector('.guest-row[data-gid="' + gid + '"]');
+    var editing = row && row.style.display === 'none';
+    form.style.display = editing ? 'none' : '';
+    if (row) row.style.display = editing ? '' : 'none';
+  }
+
+  function filterGuests(q) {
+    var needle = (q || '').trim().toLowerCase();
+    document.querySelectorAll('.guests-table .guest-row').forEach(function (row) {
+      var match = row.dataset.name.indexOf(needle) !== -1;
+      row.style.display = match ? '' : 'none';
+      var edit = document.getElementById('eg' + row.dataset.gid);
+      if (edit) edit.style.display = 'none';
+    });
   }
 
   // ── Gallery drag-and-drop reorder ─────────────────────────
@@ -732,12 +696,118 @@
   .btn-sm { font-size: 0.8rem; padding: 0.28rem 0.6rem; }
   .btn-icon { padding: 0.28rem 0.45rem; line-height: 1; }
   .btn-icon svg { display: block; }
+
+  /* Admin action buttons — one consistent, legibility-first set (theme-independent).
+     All solid with white icons/text; color conveys the action, not the theme.
+     Scoped under .main so the public pages keep the themed buttons. */
+  .main .btn-primary,
+  .main .btn-secondary,
+  .main .btn-danger,
+  .main .btn-warning {
+    color: #fff;
+    border: none;
+    box-shadow: none;
+    font-weight: 600;
+  }
+  .main .btn-primary   { background: #15803d; }   /* Save / Add / Confirm */
+  .main .btn-primary:hover:not(:disabled)   { background: #11652f; }
+  .main .btn-secondary { background: #475569; }   /* Edit / Cancel / neutral */
+  .main .btn-secondary:hover:not(:disabled) { background: #374252; }
+  .main .btn-danger    { background: #b91c1c; }   /* Delete */
+  .main .btn-danger:hover:not(:disabled)    { background: #991b1b; }
+  .main .btn-warning   { background: #b45309; }   /* Wipe / reset */
+  .main .btn-warning:hover:not(:disabled)   { background: #8f4207; }
   .inline-form {
     display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; padding: 0.4rem 0;
   }
   .inline-form input[type=text],
   .inline-form input[type=number] { flex: 1; min-width: 120px; }
   .danger-zone { border: 2px solid #c0392b; }
+
+  .guest-chev { display: none; }
+
+  /* ── Mobile: stacked status list + tap-to-expand guest cards ── */
+  @media (max-width: 600px) {
+    /* iOS Safari: 16px inputs prevent auto-zoom on focus */
+    input, select, textarea { font-size: 16px; }
+
+    /* Bigger tap targets for icon action buttons */
+    .btn-sm.btn-icon { min-width: 40px; min-height: 40px; padding: 0.5rem; }
+    .guest-actions form { margin-left: 0.4rem; }
+
+    /* Guest Submission Status → compact flex rows */
+    .status-table thead { display: none; }
+    .status-table, .status-table tbody, .status-table tr, .status-table td { display: block; }
+    .status-table tr {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 0.4rem 0.6rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border);
+    }
+    .status-table tr:last-child { border-bottom: none; }
+    .status-table td { border: none; padding: 0; }
+    .status-table td[data-label="Name"] { flex: 1 1 auto; font-weight: 600; }
+    .status-table td[data-label="Time"] { flex: 1 0 100%; font-size: 0.72rem; }
+
+    /* Guests management → tap-to-expand cards */
+    .guests-table thead { display: none; }
+    .guests-table, .guests-table tbody, .guests-table tr { display: block; }
+    .guests-table .guest-row {
+      display: grid; align-items: center; column-gap: 0.6rem; row-gap: 0.45rem;
+      grid-template-columns: 1fr auto;
+      grid-template-areas: "name status";
+      border: 1px solid var(--border); border-radius: var(--radius);
+      margin-bottom: 0.5rem; padding: 0.6rem 0.75rem; cursor: pointer;
+    }
+    .guests-table .guest-row td { display: block; border: none; padding: 0; }
+    .guests-table .guest-row td[data-label="Name"]   { grid-area: name; font-weight: 600; }
+    .guests-table .guest-row td[data-label="Status"] { grid-area: status; justify-self: end; }
+    .guests-table .guest-row td[data-label="PIN"]       { grid-area: pin; }
+    .guests-table .guest-row td[data-label="Submitted"] { grid-area: sub; justify-self: end; }
+    .guests-table .guest-row .guest-actions             { grid-area: act; }
+
+    /* Collapsed: name + status only */
+    .guests-table .guest-row td[data-label="PIN"],
+    .guests-table .guest-row td[data-label="Submitted"],
+    .guests-table .guest-row .guest-actions { display: none; }
+
+    /* Expanded: keep name + status on the top line, add a meta line + actions */
+    .guests-table .guest-row.expanded {
+      grid-template-areas:
+        "name status"
+        "pin  sub"
+        "act  act";
+    }
+    .guests-table .guest-row.expanded td[data-label="PIN"],
+    .guests-table .guest-row.expanded td[data-label="Submitted"] {
+      display: block; font-size: 0.8rem; color: var(--text); opacity: 0.85;
+      padding-top: 0.15rem; border-top: 1px solid var(--border);
+    }
+    .guests-table .guest-row.expanded td[data-label="PIN"]::before {
+      content: "PIN "; font-weight: 700; font-size: 0.62rem; text-transform: uppercase;
+      letter-spacing: 0.05em; opacity: 0.7;
+    }
+    .guests-table .guest-row.expanded td[data-label="Submitted"]:not(:empty)::before {
+      content: "🕑 ";
+    }
+    .guests-table .guest-row.expanded .guest-actions {
+      display: flex; justify-content: flex-end; gap: 0.5rem;
+      padding-top: 0.5rem !important; text-align: right !important;
+    }
+    .guest-chev {
+      display: inline-block; margin-right: 0.4rem; color: var(--primary);
+      font-weight: 700; transition: transform 0.15s;
+    }
+    .guest-row.expanded .guest-chev { transform: rotate(90deg); }
+    /* Keep the edit form row aligned with cards */
+    .guests-table tr[id^="eg"] td { display: block; padding: 0.6rem 0.75rem; }
+  }
+
+  /* ── Mobile: keep the three summary boxes on one tidy row ── */
+  @media (max-width: 480px) {
+    .stat-grid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+    .stat-box  { padding: 0.6rem 0.4rem; }
+    .stat-num  { font-size: 1.5rem; }
+    .stat-lbl  { font-size: 0.62rem; letter-spacing: 0.02em; }
+  }
 </style>
 {% endif %}
 {% endblock %}

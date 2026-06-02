@@ -185,7 +185,8 @@ def verify_guest(name, phone4):
 def get_all_guests():
     with _get_db() as conn:
         rows = conn.execute(
-            "SELECT id, name, phone4, has_submitted, submitted_at FROM guests ORDER BY name"
+            "SELECT id, name, phone4, has_submitted, submitted_at FROM guests "
+            "ORDER BY has_submitted ASC, name"
         ).fetchall()
         return [
             {
