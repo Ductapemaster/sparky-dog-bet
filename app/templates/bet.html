@@ -394,6 +394,12 @@
 
   var BREEDS_LOWER = BREEDS.map(function(b) { return b.toLowerCase(); });
 
+  // Colloquial / spelling aliases so casual searches surface the right breed.
+  // Aliases only affect filtering — the value saved is always the canonical breed name.
+  var BREED_ALIASES = {
+    "Pit Bull (Am Staff / Pit Bull Terrier)": "pitbull pittie staffy staff amstaff american staffordshire terrier american pit bull terrier"
+  };
+
   function makeBreedCombo(input) {
     var listbox = input.nextElementSibling;
     var errorEl = input.closest('.breed-row').querySelector('.breed-error');
@@ -402,8 +408,12 @@
     function getOpts() { return listbox.querySelectorAll('[role=option]'); }
 
     function renderOpts(q) {
+      var ql = q.toLowerCase();
       var filtered = q.length
-        ? BREEDS.filter(function(b) { return b.toLowerCase().indexOf(q.toLowerCase()) !== -1; })
+        ? BREEDS.filter(function(b) {
+            var hay = (b + ' ' + (BREED_ALIASES[b] || '')).toLowerCase();
+            return hay.indexOf(ql) !== -1;
+          })
         : BREEDS;
       listbox.innerHTML = '';
       activeIdx = -1;
@@ -487,8 +497,6 @@
         pick(opts[activeIdx].textContent);
       }
     });
-
-    if (input.value) open();
   }
 
   function updateRemoveButtons() {

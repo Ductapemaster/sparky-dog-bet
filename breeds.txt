@@ -1,6 +1,4 @@
 Akita
-American Pit Bull Terrier
-American Staffordshire Terrier
 Australian Shepherd
 Belgian Malinois
 Border Collie
@@ -14,7 +12,9 @@ German Shepherd Dog
 Golden Retriever
 Great Dane
 Greyhound
+Heeler
 Labrador Retriever
+Pit Bull (Am Staff / Pit Bull Terrier)
 Poodle (Standard)
 Pug
 Rhodesian Ridgeback
