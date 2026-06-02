@@ -519,12 +519,21 @@ tr:last-child td { border-bottom: none; }
 }
 #lightbox.open { display: flex; }
 
-#lb-img {
+#lb-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   max-width: 100%;
+  max-height: 90vh;
+}
+
+#lb-img {
+  max-width: calc(100vw - 10rem);
   max-height: 90vh;
   object-fit: contain;
   border-radius: 8px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  flex: 0 1 auto;
 }
 
 #lb-close {
@@ -542,11 +551,37 @@ tr:last-child td { border-bottom: none; }
 }
 #lb-close:hover { opacity: 1; }
 
+#lb-prev, #lb-next {
+  flex: 0 0 auto;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #fff;
+  font-size: 3rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  opacity: 0.8;
+  transition: opacity 0.15s, background 0.15s;
+  user-select: none;
+}
+#lb-prev:hover, #lb-next:hover { opacity: 1; background: rgba(255,255,255,0.28); }
+
+/* On phones there are no side arrows — let the image fill the screen. */
+@media (max-width: 640px) {
+  #lightbox { padding: 0.5rem; }
+  #lb-img {
+    max-width: calc(100vw - 1rem);
+    max-height: 92vh;
+  }
+}
+
 /* ── Leaderboard expand toggle ───────────────────────────── */
 .lb-row { cursor: pointer; }
+.lb-row.lb-winner { background: var(--blush-soft); }
 .lb-toggle {
   text-align: right;
-  color: var(--text);
+  color: var(--muted);
   font-size: 0.8rem;
   white-space: nowrap;
   user-select: none;

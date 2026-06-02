@@ -21,7 +21,11 @@
 {# ── Lightbox ── #}
 <div id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">
   <button id="lb-close" aria-label="Close">&times;</button>
-  <img id="lb-img" src="" alt="">
+  <div id="lb-inner">
+    <button id="lb-prev" aria-label="Previous photo">&#8249;</button>
+    <img id="lb-img" src="" alt="">
+    <button id="lb-next" aria-label="Next photo">&#8250;</button>
+  </div>
 </div>
 
 
@@ -29,14 +33,23 @@
   var lb      = document.getElementById('lightbox');
   var lbImg   = document.getElementById('lb-img');
   var lbClose = document.getElementById('lb-close');
+  var lbPrev  = document.getElementById('lb-prev');
+  var lbNext  = document.getElementById('lb-next');
 
-  document.querySelectorAll('.gallery-thumb').forEach(function (img) {
-    img.addEventListener('click', function () {
-      lbImg.src = img.dataset.full;
-      lbImg.alt = img.alt;
-      lb.classList.add('open');
-      document.body.style.overflow = 'hidden';
-    });
+  var thumbs = Array.from(document.querySelectorAll('.gallery-thumb'));
+  var currentIndex = 0;
+
+  function openLightbox(index) {
+    currentIndex = index;
+    var img = thumbs[currentIndex];
+    lbImg.src = img.dataset.full;
+    lbImg.alt = img.alt;
+    lb.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  thumbs.forEach(function (img, i) {
+    img.addEventListener('click', function () { openLightbox(i); });
   });
 
   function closeLightbox() {
@@ -45,12 +58,50 @@
     lbImg.src = '';
   }
 
+  function showPrev() {
+    currentIndex = (currentIndex - 1 + thumbs.length) % thumbs.length;
+    lbImg.src = thumbs[currentIndex].dataset.full;
+    lbImg.alt = thumbs[currentIndex].alt;
+  }
+
+  function showNext() {
+    currentIndex = (currentIndex + 1) % thumbs.length;
+    lbImg.src = thumbs[currentIndex].dataset.full;
+    lbImg.alt = thumbs[currentIndex].alt;
+  }
+
   lbClose.addEventListener('click', closeLightbox);
+  lbPrev.addEventListener('click', function (e) { e.stopPropagation(); showPrev(); });
+  lbNext.addEventListener('click', function (e) { e.stopPropagation(); showNext(); });
+
   lb.addEventListener('click', function (e) {
     if (e.target === lb) closeLightbox();
   });
+
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') closeLightbox();
+    if (!lb.classList.contains('open')) return;
+    if (e.key === 'Escape')     closeLightbox();
+    if (e.key === 'ArrowLeft')  showPrev();
+    if (e.key === 'ArrowRight') showNext();
   });
+
+  var swipeStartX = null;
+  var swipeStartY = null;
+
+  lb.addEventListener('touchstart', function (e) {
+    if (e.touches.length !== 1) return;
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  lb.addEventListener('touchend', function (e) {
+    if (swipeStartX === null) return;
+    var dx = e.changedTouches[0].clientX - swipeStartX;
+    var dy = e.changedTouches[0].clientY - swipeStartY;
+    swipeStartX = null;
+    swipeStartY = null;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (dx < 0) showNext(); else showPrev();
+  }, { passive: true });
 </script>
 {% endblock %}
