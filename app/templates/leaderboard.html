@@ -76,6 +76,15 @@
   <p class="muted" style="margin-top:0.75rem;">
     Ties broken by submission time.
   </p>
+  {# Honest disclosure: the combined pit-bull-type bucket is shown split here. Only renders once results are entered. #}
+  {% if 'Pit Bull (Am Staff / Pit Bull Terrier)' in actual %}
+  <p class="muted" style="margin-top:0.5rem; font-size:0.85rem;">
+    🐾 The <strong>Pit Bull (Am Staff / Pit Bull Terrier)</strong> result combines Sparky's two
+    closely-related pit-bull-type breeds — his DNA breakdown is <strong>24.8% American Staffordshire
+    Terrier</strong> + <strong>19.9% American Pit Bull Terrier</strong>. We scored them as one bucket
+    so no one was penalized for guessing the colloquial "pit bull."
+  </p>
+  {% endif %}
 </div>
 {% endif %}
 
