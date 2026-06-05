@@ -341,7 +341,7 @@
       <span class="spinner" id="btn-submit-spinner" style="display:none;"></span>
     </button>
     {% if editing %}
-    <a href="{{ url_for('main.bet') }}" class="btn btn-secondary btn-full" style="margin-top:0.75rem;">Cancel</a>
+    <a href="{{ url_for('main.bet') }}" class="btn btn-ghost btn-full" style="margin-top:0.75rem;">Cancel</a>
     <p class="muted" style="margin-top:0.75rem; font-size:0.85rem; text-align:center;">
       You can keep editing your bet {% if status.deadline_display %}until {{ status.deadline_display }}{% else %}until betting closes{% endif %}.
     </p>

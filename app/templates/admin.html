@@ -783,7 +783,7 @@
   .main .btn-warning {
     color: #fff;
     border: none;
-    box-shadow: none;
+    box-shadow: 0 1px 4px rgba(9,33,53,0.18);
     font-weight: 600;
   }
   .main .btn-primary   { background: #15803d; }   /* Save / Add / Confirm */
@@ -794,6 +794,12 @@
   .main .btn-danger:hover:not(:disabled)    { background: #991b1b; }
   .main .btn-warning   { background: #b45309; }   /* Wipe / reset */
   .main .btn-warning:hover:not(:disabled)   { background: #8f4207; }
+  /* Match the public kit's shape language: subtle shadow deepens on hover
+     (the translateY lift comes from the global .btn:hover rule). */
+  .main .btn-primary:hover:not(:disabled),
+  .main .btn-secondary:hover:not(:disabled),
+  .main .btn-danger:hover:not(:disabled),
+  .main .btn-warning:hover:not(:disabled) { box-shadow: 0 3px 10px rgba(9,33,53,0.22); }
   .inline-form {
     display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; padding: 0.4rem 0;
   }

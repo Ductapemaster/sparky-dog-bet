@@ -5,9 +5,9 @@
   --primary:      #092135;
   --primary-dark: #163a56;
   --primary-pale: #e8eef3;
-  --action:       #C2410C;
-  --action-dark:  #9a3412;
-  --action-pale:  rgba(194,65,12,0.12);
+  --action:       #B4471B;
+  --action-dark:  #8F3815;
+  --action-pale:  rgba(180,71,27,0.12);
   --blush:        #E3BEB4;
   --blush-soft:   #f5e7df;
   --text:         #2c2c2c;
@@ -213,21 +213,29 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s, opacity 0.15s;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s, opacity 0.15s;
   text-decoration: none;
   touch-action: manipulation;
+  /* Base resting shadow so every button reads as a raised, pressable control. */
+  box-shadow: 0 2px 8px rgba(9,33,53,0.12);
 }
-.btn:active { transform: scale(0.98); }
-.btn-primary   { background: var(--action);       color: #fff; box-shadow: 0 2px 8px rgba(158,68,35,0.25); }
-.btn-secondary { background: var(--primary-pale); color: var(--primary); border: 1.5px solid var(--primary); }
-.btn-danger    { background: var(--error-bg);     color: var(--error-text); }
-.btn-warning   { background: #fde68a;             color: #7c2d12; border: 1.5px solid #d97706; }
-.btn-primary:hover:not(:disabled)   { background: var(--action-dark); box-shadow: 0 4px 14px rgba(158,68,35,0.32); }
-.btn-secondary:hover:not(:disabled) { background: #dde6ee; }
+.btn-primary   { background: var(--action);   color: #fff;           box-shadow: 0 2px 8px rgba(158,68,35,0.28); }
+.btn-secondary { background: #c6d4e1;         color: var(--primary); box-shadow: 0 2px 8px rgba(9,33,53,0.14); }
+.btn-danger    { background: var(--error-bg); color: var(--error-text); }
+.btn-warning   { background: #fde68a;         color: #7c2d12;        border: 1.5px solid #d97706; }
+.btn-primary:hover:not(:disabled)   { background: var(--action-dark);  box-shadow: 0 5px 16px rgba(158,68,35,0.34); }
+.btn-secondary:hover:not(:disabled) { background: #b4c5d6;          box-shadow: 0 5px 16px rgba(9,33,53,0.18); }
 .btn-danger:hover:not(:disabled)    { background: #f9d9d9; }
 .btn-warning:hover:not(:disabled)   { background: #fcd34d; }
+/* Lift on hover, press down on active — tactile "click me" feedback for all variants. */
+.btn:hover:not(:disabled)  { transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+/* Ghost: the quietest tier — for dismissive actions (Cancel/Back). No fill or
+   shadow at rest so it never competes with the primary; faint fill on hover. */
+.btn-ghost { background: transparent; color: var(--primary); box-shadow: none; }
+.btn-ghost:hover:not(:disabled) { background: rgba(9,33,53,0.06); box-shadow: none; transform: none; }
 .btn-full { width: 100%; }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; transform: none; }
 
 /* Visible focus for keyboard / low-vision users. */
 .btn:focus-visible,
@@ -268,17 +276,41 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
 }
 
 .btn-remove {
-  background: none;
-  border: none;
-  color: var(--text);
-  border-radius: 6px;
-  font-size: 1.2rem;
-  line-height: 1;
+  position: relative;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  padding: 0;
+  font-size: 0;                 /* hide the literal × glyph; the bars below draw it */
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--muted);
   cursor: pointer;
-  padding: 0.35rem 0.55rem;
-  transition: background 0.15s, color 0.15s;
+  box-shadow: 0 1px 3px rgba(9,33,53,0.14);
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.1s, border-color 0.15s;
 }
-.btn-remove:hover { background: var(--error-bg); color: var(--error-text); }
+/* Pure-CSS × — two rotated bars, perfectly centered regardless of font metrics. */
+.btn-remove::before,
+.btn-remove::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.62rem;
+  height: 1.5px;
+  border-radius: 1px;
+  background: currentColor;
+}
+.btn-remove::before { transform: translate(-50%, -50%) rotate(45deg); }
+.btn-remove::after  { transform: translate(-50%, -50%) rotate(-45deg); }
+.btn-remove:hover {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border-color: rgba(192,57,43,0.4);
+  box-shadow: 0 2px 6px rgba(192,57,43,0.22);
+}
+.btn-remove:active { transform: scale(0.94); }
 
 .total-bar {
   display: flex;
@@ -502,7 +534,7 @@ tr:last-child td { border-bottom: none; }
 /* Primary wayfinding card (Place My Bet) — the dominant action. */
 .path-card--primary { border-color: var(--action); background: var(--action-pale); }
 .path-card--primary .path-card-title { color: var(--action-dark); }
-.path-card--primary:hover { border-color: var(--action); box-shadow: 0 8px 22px rgba(194,65,12,0.18); }
+.path-card--primary:hover { border-color: var(--action); box-shadow: 0 8px 22px rgba(180,71,27,0.18); }
 
 /* ── Gallery lightbox ────────────────────────────────────── */
 .gallery-thumb { cursor: zoom-in; }
