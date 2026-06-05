@@ -1,6 +1,9 @@
 import os
+import io
+from datetime import datetime
+from urllib.parse import quote
 from itertools import groupby
-from flask import Blueprint, render_template, request, session, redirect, url_for, send_from_directory, g
+from flask import Blueprint, render_template, request, session, redirect, url_for, send_from_directory, send_file, flash, g
 from werkzeug.utils import secure_filename
 from . import db, scoring
 
@@ -9,15 +12,32 @@ bp = Blueprint('main', __name__)
 
 @bp.app_context_processor
 def inject_nav_status():
-    return dict(nav_status=_status())
+    return dict(
+        nav_status=_status(),
+        kiosk=session.get('kiosk', False),
+        venmo_username=db.get_config('VenmoUsername'),
+    )
+
+
+@bp.after_app_request
+def _kiosk_no_store(response):
+    # On a shared kiosk device, prevent the browser from caching pages so the
+    # Back button can't reveal a previous guest's form or confirmation.
+    if session.get('kiosk'):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+    return response
 
 
 def _status():
     if 'status' not in g:
         g.status = {
-            'locked':      db.is_true(db.get_config('BettingLocked')),
-            'require_pin': db.is_true(db.get_config('RequirePin')),
-            'revealed':    db.is_true(db.get_config('ResultsRevealed')),
+            'locked':           db.betting_is_locked(),
+            'manual_locked':    db.is_true(db.get_config('BettingLocked')),
+            'require_pin':      db.is_true(db.get_config('RequirePin')),
+            'revealed':         db.is_true(db.get_config('ResultsRevealed')),
+            'deadline_display': db.deadline_display(),
+            'deadline_raw':     (db.get_config('BettingDeadline') or '').strip(),
         }
     return g.status
 
@@ -80,6 +100,12 @@ def leaderboard():
 def bet():
     status = _status()
     guest  = session.get('guest')
+    kiosk  = session.get('kiosk', False)
+
+    # Kiosk gas-pump confirmation after an INITIAL bet: the guest is logged out, so
+    # this is a neutral thank-you (no bet shown) that hands off to the next guest.
+    if kiosk and request.args.get('thanks') and not (guest and guest.get('verified')):
+        return render_template('bet.html', status=status, kiosk_thanks=True)
 
     if guest and guest.get('verified'):
         if guest.get('has_submitted'):
@@ -178,8 +204,55 @@ def bet_submit():
             breeds=db.get_breeds(), status=_status(),
             error=result['error'], submitted_breeds=breeds)
 
+    # Kiosk: a brand-new bet shows the gas-pump thank-you (logged out) and hands the
+    # iPad to the next guest. Edits stay logged in and return to the Bet Placed screen.
+    if session.get('kiosk') and not editing:
+        session.pop('guest', None)
+        return redirect(url_for('main.bet', thanks=1))
+
     session['guest'] = {**guest, 'has_submitted': True, 'submitted_at': result.get('submitted_at')}
     return redirect(url_for('main.bet'))
+
+
+# ── Kiosk mode (shared event device) ──────────────────────────
+
+@bp.route('/kiosk')
+def kiosk():
+    """Toggle kiosk mode for THIS device only (stored in its session cookie).
+
+    Open /kiosk once on the shared iPad to enable; /kiosk?exit=1 to disable.
+    """
+    if request.args.get('exit'):
+        session.pop('kiosk', None)
+        session.pop('guest', None)
+        return redirect(url_for('main.home'))
+    session.permanent = True
+    session['kiosk'] = True
+    session.pop('guest', None)
+    return redirect(url_for('main.bet'))
+
+
+@bp.route('/bet/logout', methods=['GET', 'POST'])
+def bet_logout():
+    """Clear the current guest (keeps kiosk flag) — used by Next Guest / idle timer."""
+    session.pop('guest', None)
+    return redirect(url_for('main.bet'))
+
+
+@bp.route('/venmo-qr.png')
+def venmo_qr():
+    """QR code encoding a prefilled $1 Venmo payment for the kiosk to display."""
+    import qrcode
+    username = (db.get_config('VenmoUsername') or 'Dan-Kouba').lstrip('@')
+    # Venmo (or the phone's QR reader) renders encoded spaces as '+', so use
+    # hyphens in the note to keep it readable.
+    note = quote('Sparky-Breed-Bet')
+    pay_url = f'https://venmo.com/{username}?txn=pay&amount=1&note={note}'
+    img = qrcode.make(pay_url)
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return send_file(buf, mimetype='image/png', max_age=86400)
 
 
 # ── Admin ─────────────────────────────────────────────────────
@@ -225,6 +298,7 @@ def admin():
 @bp.route('/admin/login', methods=['POST'])
 def admin_login():
     if request.form.get('password', '') == str(db.get_config('AdminPassword')):
+        session.permanent = True
         session['admin_auth'] = True
         return redirect(url_for('main.admin'))
     return render_template('admin.html', show_login=True, error='Incorrect password.')
@@ -238,6 +312,23 @@ def admin_toggle(key):
         return redirect(url_for('main.admin'))
     current = db.get_config(key)
     db.set_config(key, not db.is_true(current))
+    return redirect(url_for('main.admin'))
+
+
+@bp.route('/admin/set-deadline', methods=['POST'])
+def admin_set_deadline():
+    if not session.get('admin_auth'):
+        return redirect(url_for('main.admin'))
+    raw = request.form.get('deadline', '').strip()
+    if not raw:
+        db.set_config('BettingDeadline', '')
+    else:
+        # <input type="datetime-local"> gives 'YYYY-MM-DDTHH:MM' — store as 'YYYY-MM-DD HH:MM'.
+        try:
+            dt = datetime.strptime(raw, '%Y-%m-%dT%H:%M')
+            db.set_config('BettingDeadline', dt.strftime(db.DEADLINE_FMT))
+        except ValueError:
+            flash('Could not parse that date/time.')
     return redirect(url_for('main.admin'))
 
 

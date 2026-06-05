@@ -90,6 +90,75 @@
         </button>
       </form>
     </div>
+    <div style="border-top:1px solid var(--border); margin-top:0.75rem; padding-top:0.75rem;">
+      <div class="toggle-info" style="margin-bottom:0.5rem;">
+        <strong>Auto-Lock Deadline</strong>
+        <span>
+          {% if status.deadline_display %}
+            Betting auto-closes at <strong>{{ status.deadline_display }}</strong>{% if status.locked and not status.manual_locked %} — <span style="color:#b91c1c;">passed, betting is now closed</span>{% endif %}.
+          {% else %}
+            No deadline set — betting stays open until you lock it manually.
+          {% endif %}
+        </span>
+      </div>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+        <form method="post" action="{{ url_for('main.admin_set_deadline') }}"
+              style="display:flex; gap:0.5rem; flex:1; min-width:200px; align-items:center;">
+          <input type="datetime-local" name="deadline"
+                 value="{{ status.deadline_raw.replace(' ', 'T') if status.deadline_raw else '' }}"
+                 style="flex:1;">
+          <button type="submit" class="btn btn-secondary">Save Deadline</button>
+        </form>
+        {% if status.deadline_raw %}
+        <form method="post" action="{{ url_for('main.admin_set_deadline') }}">
+          <input type="hidden" name="deadline" value="">
+          <button type="submit" class="btn btn-secondary">Clear</button>
+        </form>
+        {% endif %}
+      </div>
+      <p class="muted" style="font-size:0.8rem; margin-top:0.5rem;">
+        Times are in Pacific (event timezone). The manual Lock above always overrides the deadline.
+      </p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 class="admin-sh">Kiosk Mode</h3>
+    <p class="muted" style="font-size:0.85rem; margin-bottom:0.5rem;">
+      On the shared event iPad, open <a href="{{ url_for('main.kiosk') }}"><strong>/kiosk</strong></a> once.
+      That device will then require a fresh login per guest, hide the Venmo link in favor of a scannable QR
+      code, and never show or let anyone edit a previous guest's bet. To turn it off on a device, open
+      <strong>/kiosk?exit=1</strong> there.
+    </p>
+  </div>
+
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 class="admin-sh">Leaderboard <span class="muted" style="font-weight:400; font-size:0.85rem;">(private)</span></h3>
+    {% if leaderboard %}
+    <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
+      Lowest score wins. Visible only to you here — guests don't see standings until you hit
+      <strong>Reveal Results</strong>.
+    </p>
+    <table class="status-table">
+      <thead>
+        <tr><th>#</th><th>Name</th><th style="text-align:right;">Points Off</th></tr>
+      </thead>
+      <tbody>
+        {% for entry in leaderboard %}
+        <tr>
+          <td data-label="#" style="white-space:nowrap;">{{ loop.index }}{% if loop.first %} 🏆{% elif loop.last and leaderboard|length > 1 %} 💩{% endif %}</td>
+          <td data-label="Name">{{ entry.name }}</td>
+          <td data-label="Points Off" style="text-align:right;">{{ entry.score }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top:0.75rem; font-size:0.85rem;">Ties broken by submission time.</p>
+    {% else %}
+    <p class="muted" style="font-size:0.9rem;">
+      Enter Sparky's actual breed results in the <strong>Results</strong> tab to compute standings.
+    </p>
+    {% endif %}
   </div>
 
   <div class="card" style="margin-bottom:1.5rem;">

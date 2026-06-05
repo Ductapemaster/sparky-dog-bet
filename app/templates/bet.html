@@ -1,41 +1,68 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="section-title">{% if show_submitted %}Bet Placed{% elif editing %}Edit My Bet{% else %}Place My Bet{% endif %}</h2>
+{% macro scoring_card() %}
+<div class="card" style="margin-bottom:1.25rem;">
+  <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.5rem;">How Scoring Works</h3>
+  <p>
+    Your score is how many percentage points off you are across all breeds — <strong>lowest score wins.</strong>
+    Breeds you didn't guess count as 0% from you. A perfect guess scores <strong>0 points</strong>.
+  </p>
+</div>
+{% endmacro %}
+<h2 class="section-title">{% if kiosk_thanks %}Bet Locked In{% elif show_submitted %}Bet Placed{% elif editing %}Edit My Bet{% else %}Place My Bet{% endif %}</h2>
+
+{# ── Kiosk: gas-pump confirmation after a NEW bet (no bet shown back) ── #}
+{% if kiosk_thanks %}
+<div class="card" style="text-align:center; margin-bottom:1.25rem;">
+  <div style="font-size:2.5rem; margin-bottom:0.5rem;">✅</div>
+  <h3 style="margin-bottom:0.5rem;">Bet locked in — thanks!</h3>
+  <p class="muted" style="margin-bottom:1.25rem;">Your entry is in. Tap below or hand the iPad back when you're done.</p>
+  <a href="{{ url_for('main.about') }}" id="kiosk-done-btn" class="btn btn-primary btn-full">I'm done</a>
+</div>
+<script>
+(function() {
+  var SECONDS = 10;
+  var dest = "{{ url_for('main.about') }}";
+  var btn  = document.getElementById('kiosk-done-btn');
+  var left = SECONDS;
+  function render() { btn.textContent = "I'm done (" + left + ")"; }
+  render();
+  var iv = setInterval(function() {
+    left -= 1;
+    if (left <= 0) { clearInterval(iv); window.location.href = dest; return; }
+    render();
+  }, 1000);
+})();
+</script>
 
 {# ── Submitted — read-only view ── #}
-{% if show_submitted %}
+{% elif show_submitted %}
 {% if leaderboard %}
 {% set ns = namespace(rank=none) %}
 {% for entry in leaderboard %}{% if entry.name == guest.name %}{% set ns.rank = loop.index %}{% endif %}{% endfor %}
 {% endif %}
 {% if leaderboard and ns.rank is not none %}
-<div class="card" style="margin-bottom:1rem; border-color: var(--primary); background: var(--primary-pale);">
+<div class="card" style="margin-bottom:1rem; border-color: var(--success-text); background: var(--success-bg);">
   <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
     <div style="display:flex; align-items:center; gap:0.6rem;">
       <span style="font-size:1.5rem; line-height:1;">🏆</span>
       <div>
-        <div style="font-size:1.1rem; font-weight:700;">{{ guest.name.split()[0] }} placed #{{ ns.rank }} of {{ leaderboard|length }}</div>
+        <div style="font-size:1.1rem; font-weight:700; color: var(--success-text);">{{ guest.name.split()[0] }} placed #{{ ns.rank }} of {{ leaderboard|length }}</div>
         <div class="muted" style="font-size:0.8rem;">{{ score }} pts off · <a href="{{ url_for('main.leaderboard') }}">See full leaderboard →</a></div>
       </div>
     </div>
   </div>
 </div>
 {% else %}
-<div class="card" style="margin-bottom:1rem; border-color: var(--primary); background: var(--primary-pale);">
+<div class="card" style="margin-bottom:1rem; border-color: var(--success-text); background: var(--success-bg);">
   <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
     <div style="display:flex; align-items:center; gap:0.6rem;">
-      <span style="font-size:1.5rem; line-height:1;">✓</span>
-      <div style="font-size:1.1rem; font-weight:700;">You're in, {{ guest.name.split()[0] }}!</div>
+      <span style="font-size:1.5rem; line-height:1; color: var(--success-text);">✓</span>
+      <div style="font-size:1.1rem; font-weight:700; color: var(--success-text);">You're in, {{ guest.name.split()[0] }}!</div>
     </div>
     <div class="muted" style="font-size:0.8rem;">{{ guest.submitted_at or '' }}</div>
   </div>
 </div>
-{% endif %}
-
-{% if not status.locked and not status.revealed %}
-<a href="{{ url_for('main.bet') }}?edit=1" class="btn btn-secondary btn-full" style="margin-bottom:1.25rem;">
-  Edit My Bet
-</a>
 {% endif %}
 
 <div class="card" style="margin-bottom:1.25rem;">
@@ -93,12 +120,39 @@
 </div>
 {% endif %}
 
+{% if not status.locked and not status.revealed %}
+<a href="{{ url_for('main.bet') }}?edit=1" class="btn btn-secondary btn-full" style="margin-bottom:{% if kiosk %}0.75rem{% else %}1.25rem{% endif %};">
+  Edit My Bet
+</a>
+{% endif %}
+
+{% if kiosk %}
+<a href="{{ url_for('main.bet_logout') }}" id="kiosk-logout" class="btn btn-primary btn-full" style="margin-bottom:1.25rem;">
+  Log out
+</a>
+<script>
+(function() {
+  // Kiosk auto-logout: set AUTO_LOGOUT_SECONDS > 0 to send the kiosk back to the
+  // login screen automatically after a bet is shown. 0 = disabled (manual Log out only).
+  var AUTO_LOGOUT_SECONDS = 0;
+  var dest = "{{ url_for('main.bet_logout') }}";
+  if (AUTO_LOGOUT_SECONDS > 0) {
+    setTimeout(function() { window.location.href = dest; }, AUTO_LOGOUT_SECONDS * 1000);
+  }
+})();
+</script>
+{% endif %}
+
 {# ── Betting locked ── #}
 {% elif locked %}
 <div class="card" style="text-align:center; margin-bottom:1.25rem;">
   <div style="font-size:2rem; margin-bottom:0.75rem;">🔒</div>
   <h3 style="margin-bottom:0.5rem;">Betting is Closed</h3>
+  {% if status.deadline_display %}
+  <p class="muted">Betting closed at {{ status.deadline_display }}. The results will be revealed at the Reception Dinner on Saturday!</p>
+  {% else %}
   <p class="muted">The results will be revealed at the Reception Dinner on Saturday!</p>
+  {% endif %}
 </div>
 
 {% if bet %}
@@ -158,26 +212,56 @@
 </div>
 {% endif %}
 
-{# ── Bet form or identity lookup (rules always shown) ── #}
+{# ── Bet form or identity lookup ── #}
 {% else %}
+{# Rules are hidden when editing an existing bet — the guest has seen them already. #}
+{% if not editing %}
 <div class="card" style="margin-bottom:1.25rem;">
   <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">The Rules</h3>
+  {% if kiosk %}
+  <p style="margin-bottom:0.75rem;"><strong>Entry fee: $1 per person</strong> — pick whichever is easiest:</p>
+  <div style="display:flex; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap; align-items:stretch;">
+    {# ── Cash option ── #}
+    <div style="flex:1 1 150px; border:1px solid var(--border); border-radius:14px; padding:1.1rem 0.75rem; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;">
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; margin-bottom:0.6rem;">
+        <div style="position:relative; width:128px; height:82px; background:#dcfce7; border:2px solid #16a34a; border-radius:11px; display:flex; align-items:center; justify-content:center;">
+          <div style="width:42px; height:42px; border-radius:50%; background:#ffffff; border:2px solid #16a34a; display:flex; align-items:center; justify-content:center; color:#15803d; font-weight:700; font-size:22px; line-height:1;">$</div>
+          <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:7px; height:7px; border-radius:50%; background:#16a34a;"></span>
+          <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); width:7px; height:7px; border-radius:50%; background:#16a34a;"></span>
+        </div>
+      </div>
+      <div style="font-weight:700;">Pay with cash</div>
+      <p class="muted" style="font-size:0.85rem; margin-top:0.25rem;">Drop $1 in the cash box</p>
+    </div>
+    {# ── Venmo option ── #}
+    <div style="flex:1 1 150px; border:1px solid var(--border); border-radius:14px; padding:1.1rem 0.75rem; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;">
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; margin-bottom:0.6rem;">
+        <img src="{{ url_for('main.venmo_qr') }}" alt="Scan this code to pay with Venmo"
+             style="width:130px; height:130px; image-rendering:pixelated;">
+      </div>
+      <div style="font-weight:700;">Pay with Venmo</div>
+      <p class="muted" style="font-size:0.85rem; margin-top:0.25rem;">Scan this code with your phone</p>
+    </div>
+  </div>
   <ul style="padding-left:1.25rem; line-height:2;">
-    <li>Entry fee: <strong>$1 per person</strong> (drop your dollar in the cashbox at the betting station, or Venmo <a href="https://venmo.com/u/Dan-Kouba">@Dan-Kouba</a>)</li>
     <li>Select one or more breeds and assign a percentage to each (a single breed can be 100%)</li>
     <li>Your percentages must add up to exactly <strong>100%</strong></li>
-    <li>One entry per guest — you can edit it any time until betting closes</li>
+    <li>One entry per guest — to change it later, just log in again{% if status.deadline_display %} (betting closes {{ status.deadline_display }}){% endif %}</li>
     <li>Ties broken by who submitted first</li>
   </ul>
+  {% else %}
+  <ul style="padding-left:1.25rem; line-height:2;">
+    <li>Entry fee: <strong>$1 per person</strong> (drop your dollar in the cashbox at the betting station, or Venmo <a href="https://venmo.com/u/{{ venmo_username }}">@{{ venmo_username }}</a>)</li>
+    <li>Select one or more breeds and assign a percentage to each (a single breed can be 100%)</li>
+    <li>Your percentages must add up to exactly <strong>100%</strong></li>
+    <li>One entry per guest — you can edit it any time {% if status.deadline_display %}until {{ status.deadline_display }}{% else %}until betting closes{% endif %}</li>
+    <li>Ties broken by who submitted first</li>
+  </ul>
+  {% endif %}
 </div>
 
-<div class="card" style="margin-bottom:1.25rem;">
-  <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.5rem;">How Scoring Works</h3>
-  <p>
-    Your score is how many percentage points off you are across all breeds — <strong>lowest score wins.</strong>
-    Breeds you didn't guess count as 0% from you. A perfect guess scores <strong>0 points</strong>.
-  </p>
-</div>
+{{ scoring_card() }}
+{% endif %}
 
 {% if show_form %}
 <div class="card">
@@ -185,6 +269,13 @@
     {% if editing %}Editing bet for{% else %}Placing bet for{% endif %} <strong>{{ guest.name }}</strong>.
     Assign percentages to one or more breeds — they must add up to exactly <strong>100%</strong>.
   </p>
+
+  {% if editing %}
+  <p class="muted" style="margin-bottom:1rem; font-size:0.85rem;">
+    <strong>How scoring works:</strong> your score is how many percentage points off you are across all
+    breeds — lowest score wins. Breeds you didn't guess count as 0% from you. A perfect guess scores 0 points.
+  </p>
+  {% endif %}
 
   {% if error %}
   <div class="alert alert-error">{{ error }}</div>
@@ -252,11 +343,11 @@
     {% if editing %}
     <a href="{{ url_for('main.bet') }}" class="btn btn-secondary btn-full" style="margin-top:0.75rem;">Cancel</a>
     <p class="muted" style="margin-top:0.75rem; font-size:0.85rem; text-align:center;">
-      You can keep editing your bet until betting closes.
+      You can keep editing your bet {% if status.deadline_display %}until {{ status.deadline_display }}{% else %}until betting closes{% endif %}.
     </p>
     {% else %}
     <p class="muted" style="margin-top:0.75rem; font-size:0.85rem; text-align:center;">
-      ⚠️ You can only submit once. Double-check before hitting Submit.
+      You can edit your bet anytime {% if status.deadline_display %}until {{ status.deadline_display }}{% else %}until betting closes{% endif %}. Double-check your total before submitting.
     </p>
     {% endif %}
   </form>

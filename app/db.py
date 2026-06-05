@@ -110,6 +110,8 @@ def init_db():
             ('RequirePin',      'TRUE'),
             ('ResultsRevealed', 'FALSE'),
             ('AdminPassword',   'sparky'),
+            ('BettingDeadline', ''),
+            ('VenmoUsername',   'Dan-Kouba'),
         ]
         conn.executemany(
             "INSERT OR IGNORE INTO config (key, value) VALUES (?, ?)", defaults
@@ -149,6 +151,39 @@ def set_config(key, value):
 
 def is_true(val):
     return val is True or str(val).strip().upper() == 'TRUE'
+
+
+# ── Betting deadline / lock ───────────────────────────────────
+
+DEADLINE_FMT = '%Y-%m-%d %H:%M'
+
+
+def get_deadline():
+    """Parse the BettingDeadline config into a naive local datetime, or None."""
+    raw = (get_config('BettingDeadline') or '').strip()
+    if not raw:
+        return None
+    try:
+        return datetime.strptime(raw, DEADLINE_FMT)
+    except ValueError:
+        return None
+
+
+def deadline_display():
+    """Human-friendly deadline string (e.g. 'Sat, Jun 13 at 5:00 PM'), or None."""
+    dt = get_deadline()
+    if not dt:
+        return None
+    # %-d / %-I strip leading zeros on Linux (glibc).
+    return dt.strftime('%a, %b %-d at %-I:%M %p')
+
+
+def betting_is_locked():
+    """Single source of truth: manually locked OR past the auto-lock deadline."""
+    if is_true(get_config('BettingLocked')):
+        return True
+    deadline = get_deadline()
+    return deadline is not None and datetime.now() >= deadline
 
 
 # ── Guests ────────────────────────────────────────────────────
@@ -209,7 +244,7 @@ def submit_bet(name, phone4, breeds, replace=False):
     if verification['has_submitted'] and not replace:
         return {'success': False, 'error': 'You have already placed your bet.'}
 
-    if is_true(get_config('BettingLocked')):
+    if betting_is_locked():
         return {'success': False, 'error': 'Betting is currently locked. Check with the organizers.'}
 
     if not breeds:
