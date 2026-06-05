@@ -1,8 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="section-title">Sparky</h2>
+{# Off-kiosk keeps the page title above the cards; on the kiosk the label moves
+   inside the bio card (see below) to reclaim the vertical space. #}
+{% if not kiosk %}<h2 class="section-title">Sparky</h2>{% endif %}
 
+{# On the kiosk .about-layout becomes a two-column grid (bio left, photos right)
+   so the gallery is visible on load; off-kiosk it's a plain block and stacks. #}
+<div class="about-layout">
+<div class="about-bio">
 <div class="card" style="margin-bottom:1.25rem;">
+  {% if kiosk %}<h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">About Sparky</h3>{% endif %}
   <p style="margin-bottom:1rem;">
     Meet Sparky! He's a 6 year old mixed breed rescue pup that loves toys, treats, and adventuring.
     When he's not busy contributing to scientific research through his job, he's an active guy that likes playing frisbee and soccer.
@@ -27,10 +34,15 @@
     Good luck, and may the best amateur canine geneticist win.
   </p>
 </div>
+</div>{# /.about-bio #}
 
+<div class="about-photos">
 {% if images %}
+{# The photos are self-evidently photos — on the kiosk we drop the title/subtitle. #}
+{% if not kiosk %}
 <h2 class="section-title" style="margin-top:0.5rem;">Photos</h2>
 <p class="muted" style="margin-bottom:1rem;">Study him carefully. Every clue counts.</p>
+{% endif %}
 <div class="gallery-grid" style="margin-bottom:1.5rem;">
   {% for img in images %}
   <div class="gallery-item">
@@ -41,41 +53,10 @@
   </div>
   {% endfor %}
 </div>
+{% if kiosk %}<div class="photos-scroll-hint" aria-hidden="true"><span>Scroll for more <span class="arrow">↓</span></span></div>{% endif %}
 {% endif %}
+</div>{# /.about-photos #}
+</div>{# /.about-layout #}
 
-{# ── Lightbox ── #}
-<div id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">
-  <button id="lb-close" aria-label="Close">&times;</button>
-  <img id="lb-img" src="" alt="">
-</div>
-
-
-<script>
-  var lb      = document.getElementById('lightbox');
-  var lbImg   = document.getElementById('lb-img');
-  var lbClose = document.getElementById('lb-close');
-
-  document.querySelectorAll('.gallery-thumb').forEach(function (img) {
-    img.addEventListener('click', function () {
-      lbImg.src = img.dataset.full;
-      lbImg.alt = img.alt;
-      lb.classList.add('open');
-      document.body.style.overflow = 'hidden';
-    });
-  });
-
-  function closeLightbox() {
-    lb.classList.remove('open');
-    document.body.style.overflow = '';
-    lbImg.src = '';
-  }
-
-  lbClose.addEventListener('click', closeLightbox);
-  lb.addEventListener('click', function (e) {
-    if (e.target === lb) closeLightbox();
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') closeLightbox();
-  });
-</script>
+{% include '_lightbox.html' %}
 {% endblock %}

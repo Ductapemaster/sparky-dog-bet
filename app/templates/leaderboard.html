@@ -1,8 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Leaderboard — Sparky's DNA Bet{% endblock %}
 {% block content %}
-<h2 class="section-title">Leaderboard</h2>
+{# Off-kiosk keeps the page title above the card; on the kiosk it moves inside
+   the card (like the other tabs). The page stays a single, centered card width. #}
+{% if not kiosk %}<h2 class="section-title">Leaderboard</h2>{% endif %}
 
+<div class="lb-page">
 {% if not status.revealed %}
 <div class="card" style="text-align:center;">
   <div style="font-size:2rem; margin-bottom:0.75rem;">🎲</div>
@@ -11,6 +14,7 @@
 </div>
 {% else %}
 <div class="card">
+  {% if kiosk %}<h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">Leaderboard</h3>{% endif %}
   <p class="muted" style="margin-bottom:1rem;">Score is how many percentage points off you are across all breeds — lowest score wins. Breeds not guessed count as 0%. Tap any row to see that person's full breakdown.</p>
   <table>
     <thead>
@@ -87,6 +91,7 @@
   {% endif %}
 </div>
 {% endif %}
+</div>{# /.lb-page #}
 
 <script>
   function toggleRow(i) {

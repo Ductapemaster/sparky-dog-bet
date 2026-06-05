@@ -132,6 +132,44 @@ tie-breaks). The `BettingLocked` check inside `submit_bet` enforces the edit win
     the session is auto-corrected (handles stale cookies from prior app versions)
 - `session['admin_auth']` — set to `True` after successful admin login
 
+## Responsive Modes (kiosk / phone / desktop)
+
+The UI renders in three visual modes. **Kiosk is the only one with distinct *behavior*;**
+phone and desktop differ from each other only by viewport-driven CSS. Design intent: we may
+later let **desktop adopt the kiosk *visual layout*, but desktop must NOT get kiosk
+*functionality*** (auto-logout, gas-pump handoff, no-store caching, etc.).
+
+**Mode detection**
+- **Kiosk** — opt-in per device. Visit `/kiosk` to set `session['kiosk']=True` (cleared via
+  `/kiosk?exit=1`). The flag is injected into every template by the `inject_nav_status`
+  context processor and applied as `class="kiosk"` on `<html>` (base.html). Target hardware:
+  **landscape iPad Pro, 1366×1024 CSS px** — vertical space is the tight constraint.
+- **Phone / desktop** — no kiosk flag; layout is pure CSS, mobile-first with
+  `@media (max-width: 860px / 640px / 480px)` breakpoints in `app/static/style.css`.
+
+**Kiosk-only FUNCTIONALITY** (in `routes.py` / templates, gated on the kiosk flag):
+- `Cache-Control: no-store` on every response (`_kiosk_no_store`) so Back can't reveal a
+  prior guest's form.
+- After a NEW bet, the guest is logged out and shown a "gas-pump" thank-you that counts down
+  10s and redirects to `/about` (`bet()` `kiosk_thanks` + `bet_submit`).
+- The "Bet Placed" view's **Log out** button uses the same 10s countdown auto-logout.
+- Rules/Scoring are hidden once a guest is logged in (placing a bet), mirroring the edit view.
+- Page titles are dropped and moved *inside* the cards (About / Bet / Leaderboard).
+- Payment block shows cash + Venmo QR (off-kiosk shows a Venmo text link instead).
+
+**Kiosk-only VISUAL layout** (`html.kiosk …` rules at the end of `style.css`):
+- Large type (root 21px), minimal outer margins, full-width container (`max-width: none`),
+  comfortable in-card padding; page titles relocated to internal card `<h3>`s.
+- **About** (`.about-layout`): two columns — a sticky/"frozen" 640px bio on the left, a
+  3-column photo grid on the right, with a sticky "Scroll for more ↓" overlay
+  (`.photos-scroll-hint`).
+- **Place My Bet** login (`.bet-login-layout`): Rules+Scoring left, login form right.
+- **Leaderboard** (`.lb-page`): stays a single centered ~820px card (not full-width).
+
+**Shared photo carousel** (`templates/_lightbox.html`, used by About + Gallery in *all* modes):
+arrows + swipe + a thumbnail filmstrip that highlights the active photo. Reads `data-full`
+(display image) off the clicked `.gallery-thumb`.
+
 ## Scoring Algorithm
 
 **Total Variation Distance (TVD)** in `app/scoring.py`:

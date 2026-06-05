@@ -1,0 +1,109 @@
+{# ── Shared photo carousel / lightbox ──────────────────────────────
+   Used by both the About and Gallery pages. Opens when any .gallery-thumb
+   is clicked; supports arrows, keyboard, swipe, and a thumbnail filmstrip
+   that highlights the photo currently being viewed. #}
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">
+  <button id="lb-close" aria-label="Close">&times;</button>
+  <div id="lb-stage">
+    <button id="lb-prev" aria-label="Previous photo">&#8249;</button>
+    <img id="lb-img" src="" alt="">
+    <button id="lb-next" aria-label="Next photo">&#8250;</button>
+  </div>
+  <div id="lb-strip" aria-hidden="true"></div>
+</div>
+
+<script>
+(function () {
+  var lb = document.getElementById('lightbox');
+  if (!lb) return;
+  var lbImg   = document.getElementById('lb-img');
+  var lbClose = document.getElementById('lb-close');
+  var lbPrev  = document.getElementById('lb-prev');
+  var lbNext  = document.getElementById('lb-next');
+  var stage   = document.getElementById('lb-stage');
+  var strip   = document.getElementById('lb-strip');
+
+  var thumbs = Array.from(document.querySelectorAll('.gallery-thumb'));
+  if (!thumbs.length) return;
+
+  var currentIndex = 0;
+  var stripThumbs = [];
+
+  thumbs.forEach(function (img, i) {
+    var t = document.createElement('img');
+    t.src = img.currentSrc || img.src;
+    t.alt = '';
+    t.className = 'lb-strip-thumb';
+    t.addEventListener('click', function (e) { e.stopPropagation(); goTo(i); });
+    strip.appendChild(t);
+    stripThumbs.push(t);
+  });
+
+  function render() {
+    var img = thumbs[currentIndex];
+    lbImg.src = img.dataset.full;
+    lbImg.alt = img.alt;
+    stripThumbs.forEach(function (t, i) {
+      var on = i === currentIndex;
+      t.classList.toggle('active', on);
+      if (on) t.scrollIntoView({ block: 'nearest', inline: 'center' });
+    });
+  }
+
+  function openLightbox(i) {
+    currentIndex = i;
+    lb.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    render();
+  }
+
+  function closeLightbox() {
+    lb.classList.remove('open');
+    document.body.style.overflow = '';
+    lbImg.src = '';
+  }
+
+  function goTo(i)    { currentIndex = (i + thumbs.length) % thumbs.length; render(); }
+  function showPrev() { goTo(currentIndex - 1); }
+  function showNext() { goTo(currentIndex + 1); }
+
+  thumbs.forEach(function (img, i) {
+    img.addEventListener('click', function () { openLightbox(i); });
+  });
+
+  lbClose.addEventListener('click', closeLightbox);
+  lbPrev.addEventListener('click', function (e) { e.stopPropagation(); showPrev(); });
+  lbNext.addEventListener('click', function (e) { e.stopPropagation(); showNext(); });
+
+  // Tap the dark backdrop (stage gutter, not the image) to close.
+  lb.addEventListener('click', function (e) {
+    if (e.target === lb || e.target === stage) closeLightbox();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (!lb.classList.contains('open')) return;
+    if (e.key === 'Escape')          closeLightbox();
+    else if (e.key === 'ArrowLeft')  showPrev();
+    else if (e.key === 'ArrowRight') showNext();
+  });
+
+  var swipeStartX = null;
+  var swipeStartY = null;
+
+  stage.addEventListener('touchstart', function (e) {
+    if (e.touches.length !== 1) return;
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  stage.addEventListener('touchend', function (e) {
+    if (swipeStartX === null) return;
+    var dx = e.changedTouches[0].clientX - swipeStartX;
+    var dy = e.changedTouches[0].clientY - swipeStartY;
+    swipeStartX = null;
+    swipeStartY = null;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (dx < 0) showNext(); else showPrev();
+  }, { passive: true });
+})();
+</script>
