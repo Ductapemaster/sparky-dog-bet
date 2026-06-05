@@ -342,7 +342,9 @@ def admin_breeds_edit(breed_id):
     if denied := _require_admin(): return denied
     name = request.form.get('breed_name', '').strip()
     if name:
-        db.update_breed(breed_id, name)
+        result = db.update_breed(breed_id, name)
+        if not result.get('success'):
+            flash(result.get('error', 'Could not rename breed.'))
     return redirect(url_for('main.admin'))
 
 

@@ -288,7 +288,21 @@ def add_breed(breed_name):
 
 def update_breed(breed_id, breed_name):
     with _get_db() as conn:
+        row = conn.execute("SELECT breed_name FROM breeds WHERE id=?", (breed_id,)).fetchone()
+        if not row:
+            return {'success': False, 'error': 'Breed not found.'}
+        old_name = row['breed_name']
+        if old_name == breed_name:
+            return {'success': True}
+        clash = conn.execute(
+            "SELECT 1 FROM breeds WHERE breed_name=? AND id<>?", (breed_name, breed_id)
+        ).fetchone()
+        if clash:
+            return {'success': False, 'error': f'"{breed_name}" already exists.'}
         conn.execute("UPDATE breeds SET breed_name=? WHERE id=?", (breed_name, breed_id))
+        conn.execute("UPDATE bets SET breed=? WHERE breed=?", (breed_name, old_name))
+        conn.execute("UPDATE actual_results SET breed=? WHERE breed=?", (breed_name, old_name))
+        return {'success': True}
 
 
 def delete_breed(breed_id):

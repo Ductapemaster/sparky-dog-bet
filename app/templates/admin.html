@@ -18,6 +18,14 @@
 {% block content %}
 <h2 class="section-title">Admin Panel</h2>
 
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+{% for m in messages %}
+<div class="alert alert-error">{{ m }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
 {# ── Login ── #}
 {% if show_login %}
 <div class="card">
