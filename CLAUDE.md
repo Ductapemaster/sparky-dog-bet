@@ -153,6 +153,11 @@ later let **desktop adopt the kiosk *visual layout*, but desktop must NOT get ki
 - After a NEW bet, the guest is logged out and shown a "gas-pump" thank-you that counts down
   10s and redirects to `/about` (`bet()` `kiosk_thanks` + `bet_submit`).
 - The "Bet Placed" view's **Log out** button uses the same 10s countdown auto-logout.
+- **Idle watchdog** (`base.html`): after 90s of no interaction the device hands itself
+  back to the attract screen and clears the guest (`/kiosk/reset` → `/about`), so a
+  walked-away mid-flow session never lingers. Skipped in the clean rest state (no guest
+  + already on `/` or `/about`) so the attract page never self-reloads. The timeout is
+  overridable via `?idle_ms=` for tests.
 - Rules/Scoring are hidden once a guest is logged in (placing a bet), mirroring the edit view.
 - Page titles are dropped and moved *inside* the cards (About / Bet / Leaderboard).
 - Payment block shows cash + Venmo QR (off-kiosk shows a Venmo text link instead).
@@ -195,24 +200,52 @@ Ties broken by earlier `submitted_at` timestamp. Score kept to 1 decimal place.
 
 ## Development Workflow
 
+Single server: **dev == prod**. App code (templates, static, Python) is baked into
+the Docker image at build time — only `./data` is volume-mounted — so any change is
+invisible to the live site until the image is rebuilt. `./dev.sh` makes
+"rebuild → verify healthy → test" one command so it can't be skipped.
+
+**The canonical loop — run `./dev.sh check` before calling any feature done:**
+
 ```bash
-# First time setup
-python3 -m venv .venv
-source .venv/bin/activate
+git switch -c feature/x     # branch off
+# ...edit templates / static / python...
+./dev.sh check              # lint → build+deploy → health → smoke → full e2e suite
+# ...iterate until green...
+git add -A && git commit    # commit once check passes
+```
+
+`./dev.sh` subcommands:
+
+| Command | Does |
+|---------|------|
+| `./dev.sh check` | lint + build/deploy + health + smoke + **e2e** (kiosk + mobile). The pre-"done" gate. |
+| `./dev.sh up` | build + deploy + wait until healthy |
+| `./dev.sh lint` | fast syntax gate (`py_compile` + `node --check`), no deploy |
+| `./dev.sh smoke` | HTTP 200 on key routes |
+| `./dev.sh test [kiosk\|mobile\|states\|all]` | run the e2e harness only (app must be up) |
+| `./dev.sh logs` | follow container logs |
+
+The e2e suite is the Playwright harness in `tests/kiosk-visual/` (see its `run.sh`),
+driving the real UI in Dockerized Chromium:
+- **kiosk** (iPad Pro 12.9") & **mobile** (iPhone portrait) — sizing + login → inline
+  place-bet → gas-pump auto-logout → inline edit → logout + the photo carousel, run
+  against the live app with a throwaway guest it cleans up.
+- **states** — admin lock/unlock + reveal/hide via the real admin UI, and the kiosk's
+  view of each state (🔒 nav, "Betting is Closed", ranked leaderboard, "How You Did").
+  Because these toggle *global* config, it spins up an **isolated instance on :9998**
+  with a fresh seeded DB and tears it down — never touching the live game.
+
+Needs Docker.
+
+First-time / local-without-Docker setup:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # fill in SECRET_KEY
-
-# Load guests (before the game)
-python import_guests.py guests.csv
-
-# Run locally
-python wsgi.py         # http://localhost:8000 with debug mode
-
-# Production (Docker)
-docker compose up -d --build
-
-# View logs
-docker compose logs -f web
+cp .env.example .env        # fill in SECRET_KEY
+python import_guests.py guests.csv   # load guests before the game
+python wsgi.py              # local debug server at http://localhost:8000
 ```
 
 ## Deployment & Connectivity

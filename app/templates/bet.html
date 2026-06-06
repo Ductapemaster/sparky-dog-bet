@@ -1,40 +1,41 @@
 {% extends "base.html" %}
+{% block head %}<script defer src="{{ url_for('static', filename='bet.js') }}?v={{ asset_version }}"></script>{% endblock %}
 {% block content %}
-{% macro scoring_card() %}
-<div class="card" style="margin-bottom:1.25rem;">
+{% macro scoring_block() %}
+  {# Scoring lives at the bottom of the single Rules card (see rules_block). #}
+  <hr style="border:none; border-top:1px solid var(--border); margin:1.25rem 0;">
   <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.5rem;">How Scoring Works</h3>
   <p>
     Your score is how many percentage points off you are across all breeds — <strong>lowest score wins.</strong>
     Breeds you didn't guess count as 0% from you. A perfect guess scores <strong>0 points</strong>.
   </p>
-</div>
 {% endmacro %}
 {% macro rules_block() %}
 <div class="card" style="margin-bottom:1.25rem;">
   <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">The Rules</h3>
   {% if kiosk %}
-  <p style="margin-bottom:0.75rem;"><strong>Entry fee: $1 per person</strong> — pick whichever is easiest:</p>
-  <div style="display:flex; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap; align-items:stretch;">
+  <p style="margin-bottom:0.55rem;"><strong>Entry fee: $1 per person</strong> — pick whichever is easiest:</p>
+  <div style="display:flex; gap:0.6rem; margin-bottom:0.7rem; flex-wrap:wrap; align-items:stretch;">
     {# ── Cash option ── #}
-    <div style="flex:1 1 150px; border:1px solid var(--border); border-radius:14px; padding:1.1rem 0.75rem; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;">
-      <div style="flex:1; display:flex; align-items:center; justify-content:center; margin-bottom:0.6rem;">
-        <div style="position:relative; width:128px; height:82px; background:#dcfce7; border:2px solid #16a34a; border-radius:11px; display:flex; align-items:center; justify-content:center;">
-          <div style="width:42px; height:42px; border-radius:50%; background:#ffffff; border:2px solid #16a34a; display:flex; align-items:center; justify-content:center; color:#15803d; font-weight:700; font-size:22px; line-height:1;">$</div>
-          <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:7px; height:7px; border-radius:50%; background:#16a34a;"></span>
-          <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); width:7px; height:7px; border-radius:50%; background:#16a34a;"></span>
+    <div style="flex:1 1 150px; border:1px solid var(--border); border-radius:14px; padding:0.65rem 0.6rem; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;">
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; margin-bottom:0.4rem;">
+        <div style="position:relative; width:100px; height:62px; background:#dcfce7; border:2px solid #16a34a; border-radius:9px; display:flex; align-items:center; justify-content:center;">
+          <div style="width:32px; height:32px; border-radius:50%; background:#ffffff; border:2px solid #16a34a; display:flex; align-items:center; justify-content:center; color:#15803d; font-weight:700; font-size:17px; line-height:1;">$</div>
+          <span style="position:absolute; left:8px; top:50%; transform:translateY(-50%); width:6px; height:6px; border-radius:50%; background:#16a34a;"></span>
+          <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:6px; height:6px; border-radius:50%; background:#16a34a;"></span>
         </div>
       </div>
       <div style="font-weight:700;">Pay with cash</div>
-      <p class="muted" style="font-size:0.85rem; margin-top:0.25rem;">Drop $1 in the cash box</p>
+      <p class="muted" style="font-size:0.75rem; margin-top:0.15rem;">Drop $1 in the cash box</p>
     </div>
     {# ── Venmo option ── #}
-    <div style="flex:1 1 150px; border:1px solid var(--border); border-radius:14px; padding:1.1rem 0.75rem; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;">
-      <div style="flex:1; display:flex; align-items:center; justify-content:center; margin-bottom:0.6rem;">
+    <div style="flex:1 1 150px; border:1px solid var(--border); border-radius:14px; padding:0.65rem 0.6rem; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;">
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; margin-bottom:0.4rem;">
         <img src="{{ url_for('main.venmo_qr') }}" alt="Scan this code to pay with Venmo"
-             style="width:130px; height:130px; image-rendering:pixelated;">
+             style="width:94px; height:94px; image-rendering:pixelated;">
       </div>
       <div style="font-weight:700;">Pay with Venmo</div>
-      <p class="muted" style="font-size:0.85rem; margin-top:0.25rem;">Scan this code with your phone</p>
+      <p class="muted" style="font-size:0.75rem; margin-top:0.15rem;">Scan this code with your phone</p>
     </div>
   </div>
   <ul style="padding-left:1.25rem; line-height:2;">
@@ -52,667 +53,326 @@
     <li>Ties broken by who submitted first</li>
   </ul>
   {% endif %}
+  {{ scoring_block() }}
 </div>
-
-{{ scoring_card() }}
 {% endmacro %}
-{# Off-kiosk shows the page title above the cards. On the kiosk it's dropped here
-   and each card carries its own internal title instead (see below), to save space. #}
-{% if not kiosk %}<h2 class="section-title">{% if kiosk_thanks %}Bet Locked In{% elif show_submitted %}Bet Placed{% elif editing %}Edit My Bet{% else %}Place My Bet{% endif %}</h2>{% endif %}
 
-{# ── Kiosk: gas-pump confirmation after a NEW bet (no bet shown back) ── #}
+{# ── Kiosk: gas-pump confirmation after a NEW bet — the ONE full-width state.
+   bet.js detects the missing #bet-panel and swaps the whole <main> for it. ── #}
 {% if kiosk_thanks %}
 <div class="card" style="text-align:center; margin-bottom:1.25rem;">
   <div style="font-size:2.5rem; margin-bottom:0.5rem;">✅</div>
   <h3 style="margin-bottom:0.5rem;">Bet locked in — thanks!</h3>
   <p class="muted" style="margin-bottom:1.25rem;">Your entry is in. Tap below or hand the iPad back when you're done.</p>
-  <a href="{{ url_for('main.about') }}" id="kiosk-done-btn" class="btn btn-primary btn-full">I'm done</a>
-</div>
-<script>
-(function() {
-  var SECONDS = 10;
-  var dest = "{{ url_for('main.about') }}";
-  var btn  = document.getElementById('kiosk-done-btn');
-  var left = SECONDS;
-  function render() { btn.textContent = "I'm done (" + left + ")"; }
-  render();
-  var iv = setInterval(function() {
-    left -= 1;
-    if (left <= 0) { clearInterval(iv); window.location.href = dest; return; }
-    render();
-  }, 1000);
-})();
-</script>
-
-{# ── Submitted — read-only view ── #}
-{% elif show_submitted %}
-{% if leaderboard %}
-{% set ns = namespace(rank=none) %}
-{% for entry in leaderboard %}{% if entry.name == guest.name %}{% set ns.rank = loop.index %}{% endif %}{% endfor %}
-{% endif %}
-{% if leaderboard and ns.rank is not none %}
-<div class="card" style="margin-bottom:1rem; border-color: var(--success-text); background: var(--success-bg);">
-  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-    <div style="display:flex; align-items:center; gap:0.6rem;">
-      <span style="font-size:1.5rem; line-height:1;">🏆</span>
-      <div>
-        <div style="font-size:1.1rem; font-weight:700; color: var(--success-text);">{{ guest.name.split()[0] }} placed #{{ ns.rank }} of {{ leaderboard|length }}</div>
-        <div class="muted" style="font-size:0.8rem;">{{ score }} pts off · <a href="{{ url_for('main.leaderboard') }}">See full leaderboard →</a></div>
-      </div>
-    </div>
-  </div>
-</div>
-{% else %}
-<div class="card" style="margin-bottom:1rem; border-color: var(--success-text); background: var(--success-bg);">
-  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-    <div style="display:flex; align-items:center; gap:0.6rem;">
-      <span style="font-size:1.5rem; line-height:1; color: var(--success-text);">✓</span>
-      <div style="font-size:1.1rem; font-weight:700; color: var(--success-text);">You're in, {{ guest.name.split()[0] }}!</div>
-    </div>
-    <div class="muted" style="font-size:0.8rem;">{{ guest.submitted_at or '' }}</div>
-  </div>
-</div>
-{% endif %}
-
-<div class="card" style="margin-bottom:1.25rem;">
-  <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">Your Breed Breakdown</h3>
-  <table>
-    <thead>
-      <tr><th>Breed</th><th style="text-align:right;">Percentage</th></tr>
-    </thead>
-    <tbody>
-      {% for b in bet %}
-      <tr>
-        <td>{{ b.breed }}</td>
-        <td style="text-align:right; font-weight:600;">{{ b.percentage }}%</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-{% if actual_results and bet %}
-<div class="card" style="margin-bottom:1.25rem;">
-  <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">How You Did</h3>
-  <table>
-    <thead>
-      <tr><th>Breed</th><th style="text-align:right;">Your Guess</th><th style="text-align:right;">Actual</th><th style="text-align:right;">Points Off</th></tr>
-    </thead>
-    <tbody>
-      {% set guessed_breeds = bet | map(attribute='breed') | list %}
-      {% for b in bet %}
-      <tr>
-        <td>{{ b.breed }}</td>
-        <td style="text-align:right;">{{ b.percentage }}%</td>
-        <td style="text-align:right;">{{ (actual_results.get(b.breed, 0)) | int }}%</td>
-        <td style="text-align:right;">{{ (b.percentage - actual_results.get(b.breed, 0)) | abs | int }}</td>
-      </tr>
-      {% endfor %}
-      {% for breed, pct in actual_results.items() %}
-      {% if breed not in guessed_breeds %}
-      <tr>
-        <td>{{ breed }}</td>
-        <td style="text-align:right; color:var(--text);">—</td>
-        <td style="text-align:right;">{{ pct | int }}%</td>
-        <td style="text-align:right; color:var(--text);">{{ pct | int }}</td>
-      </tr>
-      {% endif %}
-      {% endfor %}
-      {% if score is not none %}
-      <tr style="font-weight:700; border-top:2px solid var(--border);">
-        <td colspan="3">Score</td>
-        <td style="text-align:right;">{{ score }} pts off</td>
-      </tr>
-      {% endif %}
-    </tbody>
-  </table>
-</div>
-{% endif %}
-
-{% if not status.locked and not status.revealed %}
-<a href="{{ url_for('main.bet') }}?edit=1" class="btn btn-secondary btn-full" style="margin-bottom:{% if kiosk %}0.75rem{% else %}1.25rem{% endif %};">
-  Edit My Bet
-</a>
-{% endif %}
-
-{% if kiosk %}
-<a href="{{ url_for('main.bet_logout') }}" id="kiosk-logout" class="btn btn-primary btn-full" style="margin-bottom:1.25rem;">
-  Log out
-</a>
-<script>
-(function() {
-  // Kiosk auto-logout: same gas-pump countdown as the post-new-bet confirmation —
-  // count down on the button, then return to the login screen so the iPad is
-  // ready for the next guest if this one walks away.
-  var SECONDS = 10;
-  var dest = "{{ url_for('main.bet_logout') }}";
-  var btn  = document.getElementById('kiosk-logout');
-  var left = SECONDS;
-  function render() { btn.textContent = "Log out (" + left + ")"; }
-  render();
-  var iv = setInterval(function() {
-    left -= 1;
-    if (left <= 0) { clearInterval(iv); window.location.href = dest; return; }
-    render();
-  }, 1000);
-})();
-</script>
-{% endif %}
-
-{# ── Betting locked ── #}
-{% elif locked %}
-<div class="card" style="text-align:center; margin-bottom:1.25rem;">
-  <div style="font-size:2rem; margin-bottom:0.75rem;">🔒</div>
-  <h3 style="margin-bottom:0.5rem;">Betting is Closed</h3>
-  {% if status.deadline_display %}
-  <p class="muted">Betting closed at {{ status.deadline_display }}. The results will be revealed at the Reception Dinner on Saturday!</p>
-  {% else %}
-  <p class="muted">The results will be revealed at the Reception Dinner on Saturday!</p>
-  {% endif %}
-</div>
-
-{% if bet %}
-<div class="card" style="margin-bottom:1.25rem;">
-  <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">Your Submission</h3>
-  <table>
-    <thead>
-      <tr><th>Breed</th><th style="text-align:right;">Percentage</th></tr>
-    </thead>
-    <tbody>
-      {% for b in bet %}
-      <tr>
-        <td>{{ b.breed }}</td>
-        <td style="text-align:right; font-weight:600;">{{ b.percentage }}%</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% endif %}
-
-{% if actual_results and bet %}
-<div class="card" style="margin-bottom:1.25rem;">
-  <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">How You Did</h3>
-  <table>
-    <thead>
-      <tr><th>Breed</th><th style="text-align:right;">Your Guess</th><th style="text-align:right;">Actual</th><th style="text-align:right;">Points Off</th></tr>
-    </thead>
-    <tbody>
-      {% set guessed_breeds = bet | map(attribute='breed') | list %}
-      {% for b in bet %}
-      <tr>
-        <td>{{ b.breed }}</td>
-        <td style="text-align:right;">{{ b.percentage }}%</td>
-        <td style="text-align:right;">{{ (actual_results.get(b.breed, 0)) | int }}%</td>
-        <td style="text-align:right;">{{ (b.percentage - actual_results.get(b.breed, 0)) | abs | int }}</td>
-      </tr>
-      {% endfor %}
-      {% for breed, pct in actual_results.items() %}
-      {% if breed not in guessed_breeds %}
-      <tr>
-        <td>{{ breed }}</td>
-        <td style="text-align:right; color:var(--text);">—</td>
-        <td style="text-align:right;">{{ pct | int }}%</td>
-        <td style="text-align:right; color:var(--text);">{{ pct | int }}</td>
-      </tr>
-      {% endif %}
-      {% endfor %}
-      {% if score is not none %}
-      <tr style="font-weight:700; border-top:2px solid var(--border);">
-        <td colspan="3">Score</td>
-        <td style="text-align:right;">{{ score }} pts off</td>
-      </tr>
-      {% endif %}
-    </tbody>
-  </table>
-</div>
-{% endif %}
-
-{# ── Bet form or identity lookup ── #}
-{% else %}
-
-{% if show_form %}
-{# Rules are hidden when editing, and on the kiosk once a guest has logged in
-   (they saw the rules on the login screen) — mirrors the edit-bet experience. #}
-{% if not editing and not kiosk %}
-{{ rules_block() }}
-{% endif %}
-<div class="card">
-  {% if kiosk %}<h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">{% if editing %}Edit My Bet{% else %}Place My Bet{% endif %}</h3>{% endif %}
-  <p style="margin-bottom:1rem;">
-    {% if editing %}Editing bet for{% else %}Placing bet for{% endif %} <strong>{{ guest.name }}</strong>.
-    Assign percentages to one or more breeds — they must add up to exactly <strong>100%</strong>.
-  </p>
-
-  {% if editing %}
-  <p class="muted" style="margin-bottom:1rem; font-size:0.85rem;">
-    <strong>How scoring works:</strong> your score is how many percentage points off you are across all
-    breeds — lowest score wins. Breeds you didn't guess count as 0% from you. A perfect guess scores 0 points.
-  </p>
-  {% endif %}
-
-  {% if error %}
-  <div class="alert alert-error">{{ error }}</div>
-  {% endif %}
-
-  <form method="post" action="{{ url_for('main.bet_submit') }}" id="bet-form">
-    {% if editing %}<input type="hidden" name="editing" value="1">{% endif %}
-    <div id="breed-rows">
-      {% if submitted_breeds %}
-        {% for b in submitted_breeds %}
-        <div class="breed-row">
-          <div class="breed-col">
-            <div class="autocomplete-wrap">
-              <input type="text" name="breed[]" required class="breed-combo"
-                     autocomplete="off" spellcheck="false"
-                     placeholder="Start typing a breed…"
-                     value="{{ b.breed }}" data-valid="true">
-              <ul role="listbox" class="combo-listbox" hidden></ul>
-            </div>
-            <div class="breed-error" hidden>Please select a breed from the list.</div>
-          </div>
-          <div class="breed-controls">
-            <input type="number" name="percentage[]" class="breed-pct"
-                   value="{{ b.percentage }}" min="1" max="100" placeholder="%" required
-                   inputmode="numeric" oninput="updateFormState()">
-            <button type="button" class="btn-remove" onclick="removeRow(this)">×</button>
-          </div>
-        </div>
-        {% endfor %}
-      {% else %}
-        <div class="breed-row">
-          <div class="breed-col">
-            <div class="autocomplete-wrap">
-              <input type="text" name="breed[]" required class="breed-combo"
-                     autocomplete="off" spellcheck="false"
-                     placeholder="Start typing a breed…"
-                     value="" data-valid="false">
-              <ul role="listbox" class="combo-listbox" hidden></ul>
-            </div>
-            <div class="breed-error" hidden>Please select a breed from the list.</div>
-          </div>
-          <div class="breed-controls">
-            <input type="number" name="percentage[]" class="breed-pct"
-                   placeholder="%" min="1" max="100" required
-                   inputmode="numeric" oninput="updateFormState()">
-            <button type="button" class="btn-remove" onclick="removeRow(this)">×</button>
-          </div>
-        </div>
-      {% endif %}
-    </div>
-
-    <button type="button" class="btn btn-secondary btn-add-breed" onclick="addRow()" style="margin-bottom:1rem;">
-      + Add Another Breed
-    </button>
-
-    <div class="total-bar" id="total-bar">
-      <span>Total</span>
-      <span id="total-display">0%</span>
-    </div>
-
-    <button type="submit" class="btn btn-primary btn-full" id="btn-submit" disabled>
-      <span id="btn-submit-label">{% if editing %}Update My Bet{% else %}Submit My Bet{% endif %}</span>
-      <span class="spinner" id="btn-submit-spinner" style="display:none;"></span>
-    </button>
-    {% if editing %}
-    <a href="{{ url_for('main.bet') }}" class="btn btn-ghost btn-full" style="margin-top:0.75rem;">Cancel</a>
-    <p class="muted" style="margin-top:0.75rem; font-size:0.85rem; text-align:center;">
-      You can keep editing your bet {% if status.deadline_display %}until {{ status.deadline_display }}{% else %}until betting closes{% endif %}.
-    </p>
-    {% else %}
-    <p class="muted" style="margin-top:0.75rem; font-size:0.85rem; text-align:center;">
-      You can edit your bet anytime {% if status.deadline_display %}until {{ status.deadline_display }}{% else %}until betting closes{% endif %}. Double-check your total before submitting.
-    </p>
-    {% endif %}
-  </form>
+  <a href="{{ url_for('main.about') }}" class="btn btn-primary btn-full"
+     data-countdown-href="{{ url_for('main.about') }}" data-countdown-seconds="10" data-countdown-label="I'm done">I'm done</a>
 </div>
 
 {% else %}
-{# Identity lookup. On the kiosk this is a two-column layout — rules + scoring on
-   the left, the login form on the right — so both fit above the fold. Off-kiosk
-   the wrapper is a plain block, so it stacks exactly as before. #}
-<div class="bet-login-layout">
-  <div class="bet-login-info">
+{# ── Persistent two-column shell. Rules live in .bet-info and NEVER re-render;
+   bet.js swaps only #bet-panel (on wide screens) so the left column stays put.
+   Two columns at ≥900px (kiosk + desktop); stacks below. ── #}
+<div class="bet-layout state-{{ 'panel' if (show_form or show_submitted or locked) else 'login' }}">
+  <aside class="bet-info">
     {{ rules_block() }}
-  </div>
-  <div class="bet-login-form">
-<div class="card">
-  {% if kiosk %}<h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">Place My Bet</h3>{% endif %}
-  <p style="margin-bottom:1.25rem;">
-    Find your name to place your bet or view a previously submitted bet.
-  </p>
+  </aside>
+  <section class="bet-panel" id="bet-panel">
 
-  {% if error %}
-  <div class="alert alert-error">{{ error }}</div>
+  {# ── Submitted — read-only view (with Edit) ── #}
+  {% if show_submitted %}
+  {% if leaderboard %}
+  {% set ns = namespace(rank=none) %}
+  {% for entry in leaderboard %}{% if entry.name == guest.name %}{% set ns.rank = loop.index %}{% endif %}{% endfor %}
   {% endif %}
-
-  <form method="post" action="{{ url_for('main.bet_verify') }}">
-    <div class="field">
-      <label for="name">Your Name</label>
-      <div class="autocomplete-wrap">
-        <input type="text" name="name" id="name"
-               role="combobox" autocomplete="off" spellcheck="false"
-               aria-autocomplete="list" aria-controls="name-listbox"
-               aria-expanded="false" aria-activedescendant=""
-               placeholder="Start typing your name…" required
-               value="{{ selected_name or '' }}">
-        <ul id="name-listbox" role="listbox" class="combo-listbox" aria-label="Guest names" hidden></ul>
+  {% if leaderboard and ns.rank is not none %}
+  <div class="card" style="margin-bottom:1rem; border-color: var(--success-text); background: var(--success-bg);">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+      <div style="display:flex; align-items:center; gap:0.6rem;">
+        <span style="font-size:1.5rem; line-height:1;">🏆</span>
+        <div>
+          <div style="font-size:1.1rem; font-weight:700; color: var(--success-text);">{{ guest.name.split()[0] }} placed #{{ ns.rank }} of {{ leaderboard|length }}</div>
+          <div class="muted" style="font-size:0.8rem;">{{ score }} pts off · <a href="{{ url_for('main.leaderboard') }}">See full leaderboard →</a></div>
+        </div>
       </div>
     </div>
-
-    <div class="field">
-      <label for="phone4">Last 4 Digits of Your Phone</label>
-      <input type="tel" name="phone4" id="phone4" maxlength="4" pattern="\d{4}"
-             placeholder="e.g. 4827" inputmode="numeric" autocomplete="off">
-    </div>
-
-    <button type="submit" class="btn btn-primary btn-full">Continue &rarr;</button>
-  </form>
-</div>
   </div>
-</div>
+  {% else %}
+  <div class="card" style="margin-bottom:1rem; border-color: var(--success-text); background: var(--success-bg);">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+      <div style="display:flex; align-items:center; gap:0.6rem;">
+        <span style="font-size:1.5rem; line-height:1; color: var(--success-text);">✓</span>
+        <div style="font-size:1.1rem; font-weight:700; color: var(--success-text);">You're in, {{ guest.name.split()[0] }}!</div>
+      </div>
+      <div class="muted" style="font-size:0.8rem;">{{ guest.submitted_at or '' }}</div>
+    </div>
+  </div>
+  {% endif %}
 
-<script>
-(function() {
-  var NAMES   = {{ guest_names | tojson }};
-  var input   = document.getElementById('name');
-  var listbox = document.getElementById('name-listbox');
-  var activeIdx = -1;
+  <div class="card" style="margin-bottom:1.25rem;">
+    <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">Your Breed Breakdown</h3>
+    <table>
+      <thead>
+        <tr><th>Breed</th><th style="text-align:right;">Percentage</th></tr>
+      </thead>
+      <tbody>
+        {% for b in bet %}
+        <tr>
+          <td>{{ b.breed }}</td>
+          <td style="text-align:right; font-weight:600;">{{ b.percentage }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
-  function getOpts() { return listbox.querySelectorAll('[role=option]'); }
+  {% if actual_results and bet %}
+  <div class="card" style="margin-bottom:1.25rem;">
+    <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">How You Did</h3>
+    <table>
+      <thead>
+        <tr><th>Breed</th><th style="text-align:right;">Your Guess</th><th style="text-align:right;">Actual</th><th style="text-align:right;">Points Off</th></tr>
+      </thead>
+      <tbody>
+        {% set guessed_breeds = bet | map(attribute='breed') | list %}
+        {% for b in bet %}
+        <tr>
+          <td>{{ b.breed }}</td>
+          <td style="text-align:right;">{{ b.percentage }}%</td>
+          <td style="text-align:right;">{{ (actual_results.get(b.breed, 0)) | int }}%</td>
+          <td style="text-align:right;">{{ (b.percentage - actual_results.get(b.breed, 0)) | abs | int }}</td>
+        </tr>
+        {% endfor %}
+        {% for breed, pct in actual_results.items() %}
+        {% if breed not in guessed_breeds %}
+        <tr>
+          <td>{{ breed }}</td>
+          <td style="text-align:right; color:var(--text);">—</td>
+          <td style="text-align:right;">{{ pct | int }}%</td>
+          <td style="text-align:right; color:var(--text);">{{ pct | int }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        {% if score is not none %}
+        <tr style="font-weight:700; border-top:2px solid var(--border);">
+          <td colspan="3">Score</td>
+          <td style="text-align:right;">{{ score }} pts off</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 
-  function renderOpts(q) {
-    var filtered = q.length
-      ? NAMES.filter(function(n) { return n.toLowerCase().indexOf(q.toLowerCase()) !== -1; })
-      : NAMES;
-    listbox.innerHTML = '';
-    activeIdx = -1;
-    input.setAttribute('aria-activedescendant', '');
-    filtered.forEach(function(name, i) {
-      var li = document.createElement('li');
-      li.id = 'nopt-' + i;
-      li.setAttribute('role', 'option');
-      li.setAttribute('aria-selected', 'false');
-      li.textContent = name;
-      li.addEventListener('mousedown', function(e) { e.preventDefault(); });
-      li.addEventListener('click', function() { pick(name); });
-      listbox.appendChild(li);
-    });
-  }
+  {% if not status.locked and not status.revealed %}
+  <a href="{{ url_for('main.bet') }}?edit=1" data-inline-nav class="btn btn-secondary btn-full" style="margin-bottom:{% if kiosk %}0.75rem{% else %}1.25rem{% endif %};">
+    Edit My Bet
+  </a>
+  {% endif %}
 
-  function open() {
-    renderOpts(input.value);
-    listbox.hidden = false;
-    input.setAttribute('aria-expanded', 'true');
-  }
+  {% if kiosk %}
+  {# Kiosk auto-logout: gas-pump countdown (handled by bet.js) returns to the login
+     screen so the iPad is ready for the next guest if this one walks away. #}
+  <a href="{{ url_for('main.bet_logout') }}" class="btn btn-primary btn-full" style="margin-bottom:1.25rem;"
+     data-countdown-href="{{ url_for('main.bet_logout') }}" data-countdown-seconds="10" data-countdown-label="Log out">
+    Log out
+  </a>
+  {% endif %}
 
-  function close() {
-    listbox.hidden = true;
-    input.setAttribute('aria-expanded', 'false');
-    input.setAttribute('aria-activedescendant', '');
-    activeIdx = -1;
-  }
+  {# ── Betting locked ── #}
+  {% elif locked %}
+  <div class="card" style="text-align:center; margin-bottom:1.25rem;">
+    <div style="font-size:2rem; margin-bottom:0.75rem;">🔒</div>
+    <h3 style="margin-bottom:0.5rem;">Betting is Closed</h3>
+    {% if status.deadline_display %}
+    <p class="muted">Betting closed at {{ status.deadline_display }}. The results will be revealed at the Reception Dinner on Saturday!</p>
+    {% else %}
+    <p class="muted">The results will be revealed at the Reception Dinner on Saturday!</p>
+    {% endif %}
+  </div>
 
-  function pick(name) {
-    input.value = name;
-    close();
-  }
+  {% if bet %}
+  <div class="card" style="margin-bottom:1.25rem;">
+    <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">Your Submission</h3>
+    <table>
+      <thead>
+        <tr><th>Breed</th><th style="text-align:right;">Percentage</th></tr>
+      </thead>
+      <tbody>
+        {% for b in bet %}
+        <tr>
+          <td>{{ b.breed }}</td>
+          <td style="text-align:right; font-weight:600;">{{ b.percentage }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 
-  function highlight(idx) {
-    var opts = getOpts();
-    if (!opts.length) return;
-    opts.forEach(function(o) { o.setAttribute('aria-selected', 'false'); o.classList.remove('active'); });
-    activeIdx = Math.max(0, Math.min(idx, opts.length - 1));
-    opts[activeIdx].setAttribute('aria-selected', 'true');
-    opts[activeIdx].classList.add('active');
-    input.setAttribute('aria-activedescendant', opts[activeIdx].id);
-    opts[activeIdx].scrollIntoView({ block: 'nearest' });
-  }
+  {% if actual_results and bet %}
+  <div class="card" style="margin-bottom:1.25rem;">
+    <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">How You Did</h3>
+    <table>
+      <thead>
+        <tr><th>Breed</th><th style="text-align:right;">Your Guess</th><th style="text-align:right;">Actual</th><th style="text-align:right;">Points Off</th></tr>
+      </thead>
+      <tbody>
+        {% set guessed_breeds = bet | map(attribute='breed') | list %}
+        {% for b in bet %}
+        <tr>
+          <td>{{ b.breed }}</td>
+          <td style="text-align:right;">{{ b.percentage }}%</td>
+          <td style="text-align:right;">{{ (actual_results.get(b.breed, 0)) | int }}%</td>
+          <td style="text-align:right;">{{ (b.percentage - actual_results.get(b.breed, 0)) | abs | int }}</td>
+        </tr>
+        {% endfor %}
+        {% for breed, pct in actual_results.items() %}
+        {% if breed not in guessed_breeds %}
+        <tr>
+          <td>{{ breed }}</td>
+          <td style="text-align:right; color:var(--text);">—</td>
+          <td style="text-align:right;">{{ pct | int }}%</td>
+          <td style="text-align:right; color:var(--text);">{{ pct | int }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        {% if score is not none %}
+        <tr style="font-weight:700; border-top:2px solid var(--border);">
+          <td colspan="3">Score</td>
+          <td style="text-align:right;">{{ score }} pts off</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 
-  input.addEventListener('blur',  close);
-  input.addEventListener('input', function() {
-    if (this.value.length) { renderOpts(this.value); listbox.hidden = false; input.setAttribute('aria-expanded', 'true'); }
-    else close();
-  });
+  {# ── Bet form (place or edit) ── #}
+  {% elif show_form %}
+  <div class="card">
+    <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">{% if editing %}Edit My Bet{% else %}Place My Bet{% endif %}</h3>
+    <p style="margin-bottom:1rem;">
+      {% if editing %}Editing bet for{% else %}Placing bet for{% endif %} <strong>{{ guest.name }}</strong>.
+      Assign percentages to one or more breeds — they must add up to exactly <strong>100%</strong>.
+    </p>
 
-  input.addEventListener('keydown', function(e) {
-    var opts = getOpts();
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (listbox.hidden) open();
-      highlight(activeIdx < 0 ? 0 : activeIdx + 1);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      highlight(activeIdx <= 0 ? 0 : activeIdx - 1);
-    } else if (e.key === 'Enter' && !listbox.hidden && activeIdx >= 0 && opts[activeIdx]) {
-      e.preventDefault();
-      pick(opts[activeIdx].textContent);
-    } else if (e.key === 'Escape') {
-      close();
-    } else if (e.key === 'Tab' && !listbox.hidden && activeIdx >= 0 && opts[activeIdx]) {
-      pick(opts[activeIdx].textContent);
-    }
-  });
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
 
-  input.addEventListener('focus', function() {
-    setTimeout(function() { input.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 350);
-  });
+    <script type="application/json" id="breeds-data">{{ breeds | tojson if breeds is defined else '[]' }}</script>
+    <form method="post" action="{{ url_for('main.bet_submit') }}" id="bet-form">
+      {% if editing %}<input type="hidden" name="editing" value="1">{% endif %}
+      <div id="breed-rows">
+        {% if submitted_breeds %}
+          {% for b in submitted_breeds %}
+          <div class="breed-row">
+            <div class="breed-col">
+              <div class="autocomplete-wrap">
+                <input type="text" name="breed[]" required class="breed-combo"
+                       autocomplete="off" spellcheck="false"
+                       placeholder="Start typing a breed…"
+                       value="{{ b.breed }}" data-valid="true">
+                <ul role="listbox" class="combo-listbox" hidden></ul>
+              </div>
+              <div class="breed-error" hidden>Please select a breed from the list.</div>
+            </div>
+            <div class="breed-controls">
+              <input type="number" name="percentage[]" class="breed-pct"
+                     value="{{ b.percentage }}" min="1" max="100" placeholder="%" required
+                     inputmode="numeric" oninput="updateFormState()">
+              <button type="button" class="btn-remove" onclick="removeRow(this)">×</button>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="breed-row">
+            <div class="breed-col">
+              <div class="autocomplete-wrap">
+                <input type="text" name="breed[]" required class="breed-combo"
+                       autocomplete="off" spellcheck="false"
+                       placeholder="Start typing a breed…"
+                       value="" data-valid="false">
+                <ul role="listbox" class="combo-listbox" hidden></ul>
+              </div>
+              <div class="breed-error" hidden>Please select a breed from the list.</div>
+            </div>
+            <div class="breed-controls">
+              <input type="number" name="percentage[]" class="breed-pct"
+                     placeholder="%" min="1" max="100" required
+                     inputmode="numeric" oninput="updateFormState()">
+              <button type="button" class="btn-remove" onclick="removeRow(this)">×</button>
+            </div>
+          </div>
+        {% endif %}
+      </div>
 
-  if (input.value) { renderOpts(input.value); listbox.hidden = false; input.setAttribute('aria-expanded', 'true'); }
-})();
-</script>
+      <button type="button" class="btn btn-secondary btn-add-breed" onclick="addRow()" style="margin-bottom:1rem;">
+        + Add Another Breed
+      </button>
 
+      <div class="total-bar" id="total-bar">
+        <span>Total</span>
+        <span id="total-display">0%</span>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full" id="btn-submit" disabled>
+        <span id="btn-submit-label">{% if editing %}Update My Bet{% else %}Submit My Bet{% endif %}</span>
+        <span class="spinner" id="btn-submit-spinner" style="display:none;"></span>
+      </button>
+      {% if editing %}
+      <a href="{{ url_for('main.bet') }}" data-inline-nav class="btn btn-ghost btn-full" style="margin-top:0.75rem;">Cancel</a>
+      <p class="muted" style="margin-top:0.75rem; font-size:0.85rem; text-align:center;">
+        You can keep editing your bet {% if status.deadline_display %}until {{ status.deadline_display }}{% else %}until betting closes{% endif %}.
+      </p>
+      {% else %}
+      <p class="muted" style="margin-top:0.75rem; font-size:0.85rem; text-align:center;">
+        You can edit your bet anytime {% if status.deadline_display %}until {{ status.deadline_display }}{% else %}until betting closes{% endif %}. Double-check your total before submitting.
+      </p>
+      {% endif %}
+    </form>
+  </div>
+
+  {# ── Identity lookup (login) ── #}
+  {% else %}
+  <div class="card">
+    <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">Place My Bet</h3>
+    <p style="margin-bottom:1.25rem;">
+      Find your name to place your bet or view a previously submitted bet.
+    </p>
+
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <script type="application/json" id="names-data">{{ guest_names | tojson if guest_names is defined else '[]' }}</script>
+    <form method="post" action="{{ url_for('main.bet_verify') }}" id="verify-form">
+      <div class="field">
+        <label for="name">Your Name</label>
+        <div class="autocomplete-wrap">
+          <input type="text" name="name" id="name"
+                 role="combobox" autocomplete="off" spellcheck="false"
+                 aria-autocomplete="list" aria-controls="name-listbox"
+                 aria-expanded="false" aria-activedescendant=""
+                 placeholder="Start typing your name…" required
+                 value="{{ selected_name or '' }}">
+          <ul id="name-listbox" role="listbox" class="combo-listbox" aria-label="Guest names" hidden></ul>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="phone4">Last 4 Digits of Your Phone</label>
+        <input type="tel" name="phone4" id="phone4" maxlength="4" pattern="\d{4}"
+               placeholder="e.g. 4827" inputmode="numeric" autocomplete="off">
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full">Continue &rarr;</button>
+    </form>
+  </div>
+  {% endif %}
+
+  </section>{# /#bet-panel #}
+</div>{# /.bet-layout #}
 {% endif %}
-{% endif %}
 
-<script>
-  var BREEDS = {{ breeds | tojson if breeds is defined else '[]' }};
-
-  var BREEDS_LOWER = BREEDS.map(function(b) { return b.toLowerCase(); });
-
-  // Colloquial / spelling aliases so casual searches surface the right breed.
-  // Aliases only affect filtering — the value saved is always the canonical breed name.
-  var BREED_ALIASES = {
-    "Pit Bull (Am Staff / Pit Bull Terrier)": "pitbull pittie staffy staff amstaff american staffordshire terrier american pit bull terrier"
-  };
-
-  function makeBreedCombo(input) {
-    var listbox = input.nextElementSibling;
-    var errorEl = input.closest('.breed-row').querySelector('.breed-error');
-    var activeIdx = -1;
-
-    function getOpts() { return listbox.querySelectorAll('[role=option]'); }
-
-    function renderOpts(q) {
-      var ql = q.toLowerCase();
-      var filtered = q.length
-        ? BREEDS.filter(function(b) {
-            var hay = (b + ' ' + (BREED_ALIASES[b] || '')).toLowerCase();
-            return hay.indexOf(ql) !== -1;
-          })
-        : BREEDS;
-      listbox.innerHTML = '';
-      activeIdx = -1;
-      filtered.forEach(function(name, i) {
-        var li = document.createElement('li');
-        li.setAttribute('role', 'option');
-        li.setAttribute('aria-selected', 'false');
-        li.textContent = name;
-        li.addEventListener('mousedown', function(e) { e.preventDefault(); });
-        li.addEventListener('click', function() { pick(name); });
-        listbox.appendChild(li);
-      });
-    }
-
-    function pick(name) {
-      input.value = name;
-      input.dataset.valid = 'true';
-      if (errorEl) errorEl.hidden = true;
-      input.classList.remove('breed-invalid');
-      close();
-      updateFormState();
-    }
-
-    function open() { renderOpts(input.value); listbox.hidden = false; }
-    function close() { listbox.hidden = true; activeIdx = -1; }
-
-    function validateOnBlur() {
-      var val = input.value.trim();
-      if (val && BREEDS_LOWER.indexOf(val.toLowerCase()) !== -1) {
-        input.dataset.valid = 'true';
-        input.classList.remove('breed-invalid');
-        if (errorEl) errorEl.hidden = true;
-      } else if (val) {
-        input.dataset.valid = 'false';
-        input.classList.add('breed-invalid');
-        if (errorEl) errorEl.hidden = false;
-      } else {
-        input.dataset.valid = 'false';
-        input.classList.remove('breed-invalid');
-        if (errorEl) errorEl.hidden = true;
-      }
-      updateFormState();
-    }
-
-    function highlight(idx) {
-      var opts = getOpts();
-      if (!opts.length) return;
-      opts.forEach(function(o) { o.setAttribute('aria-selected', 'false'); o.classList.remove('active'); });
-      activeIdx = Math.max(0, Math.min(idx, opts.length - 1));
-      opts[activeIdx].setAttribute('aria-selected', 'true');
-      opts[activeIdx].classList.add('active');
-      opts[activeIdx].scrollIntoView({ block: 'nearest' });
-    }
-
-    input.addEventListener('focus', open);
-    input.addEventListener('click', function() { if (listbox.hidden) open(); });
-    input.addEventListener('blur', function() { close(); validateOnBlur(); });
-    input.addEventListener('input', function() {
-      input.dataset.valid = 'false';
-      input.classList.remove('breed-invalid');
-      if (errorEl) errorEl.hidden = true;
-      open();
-      updateFormState();
-    });
-
-    input.addEventListener('keydown', function(e) {
-      var opts = getOpts();
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (listbox.hidden) open();
-        highlight(activeIdx < 0 ? 0 : activeIdx + 1);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        highlight(activeIdx <= 0 ? 0 : activeIdx - 1);
-      } else if (e.key === 'Enter' && !listbox.hidden && activeIdx >= 0 && opts[activeIdx]) {
-        e.preventDefault();
-        pick(opts[activeIdx].textContent);
-      } else if (e.key === 'Escape') {
-        close();
-      } else if (e.key === 'Tab' && !listbox.hidden && activeIdx >= 0 && opts[activeIdx]) {
-        pick(opts[activeIdx].textContent);
-      }
-    });
-  }
-
-  function updateRemoveButtons() {
-    var btns = document.querySelectorAll('.btn-remove');
-    var show = btns.length > 1;
-    btns.forEach(function(b) { b.style.display = show ? '' : 'none'; });
-  }
-
-  function addRow() {
-    var container = document.getElementById('breed-rows');
-    var row = document.createElement('div');
-    row.className = 'breed-row';
-
-    var col = document.createElement('div');
-    col.className = 'breed-col';
-
-    var wrap = document.createElement('div');
-    wrap.className = 'autocomplete-wrap';
-    var inp = document.createElement('input');
-    inp.type = 'text'; inp.name = 'breed[]'; inp.required = true;
-    inp.className = 'breed-combo'; inp.autocomplete = 'off';
-    inp.placeholder = 'Start typing a breed…';
-    inp.dataset.valid = 'false';
-    var ul = document.createElement('ul');
-    ul.setAttribute('role', 'listbox');
-    ul.className = 'combo-listbox';
-    ul.hidden = true;
-    wrap.appendChild(inp);
-    wrap.appendChild(ul);
-    col.appendChild(wrap);
-
-    var errDiv = document.createElement('div');
-    errDiv.className = 'breed-error';
-    errDiv.hidden = true;
-    errDiv.textContent = 'Please select a breed from the list.';
-    col.appendChild(errDiv);
-    row.appendChild(col);
-
-    var controls = document.createElement('div');
-    controls.className = 'breed-controls';
-
-    var pct = document.createElement('input');
-    pct.type = 'number'; pct.name = 'percentage[]'; pct.className = 'breed-pct';
-    pct.placeholder = '%'; pct.min = '1'; pct.max = '99'; pct.required = true;
-    pct.setAttribute('inputmode', 'numeric');
-    pct.setAttribute('oninput', 'updateFormState()');
-    controls.appendChild(pct);
-
-    var btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'btn-remove'; btn.textContent = '×';
-    btn.setAttribute('onclick', 'removeRow(this)');
-    controls.appendChild(btn);
-    row.appendChild(controls);
-
-    container.appendChild(row);
-    makeBreedCombo(inp);
-    inp.focus();
-    updateTotal();
-    updateRemoveButtons();
-  }
-
-  function removeRow(btn) {
-    if (document.querySelectorAll('.breed-row').length > 1) {
-      btn.closest('.breed-row').remove();
-      updateFormState();
-      updateRemoveButtons();
-    }
-  }
-
-  function updateFormState() {
-    var total = 0;
-    document.querySelectorAll('input[name="percentage[]"]').forEach(function(i) {
-      total += parseInt(i.value) || 0;
-    });
-    var bar = document.getElementById('total-bar');
-    if (!bar) return;
-    document.getElementById('total-display').textContent = total + '%';
-    bar.className = 'total-bar ' + (total === 100 ? 'total-ok' : 'total-bad');
-    var allBreedsValid = true;
-    document.querySelectorAll('.breed-combo').forEach(function(inp) {
-      if (inp.dataset.valid !== 'true') allBreedsValid = false;
-    });
-    document.getElementById('btn-submit').disabled = (total !== 100 || !allBreedsValid);
-  }
-
-  function updateTotal() { updateFormState(); }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    updateTotal();
-    updateRemoveButtons();
-    document.querySelectorAll('.breed-combo').forEach(makeBreedCombo);
-
-    document.getElementById('bet-form').addEventListener('submit', function() {
-      var btn     = document.getElementById('btn-submit');
-      var label   = document.getElementById('btn-submit-label');
-      var spinner = document.getElementById('btn-submit-spinner');
-      btn.disabled         = true;
-      label.textContent    = 'Submitting…';
-      spinner.style.display = '';
-    });
-  });
-</script>
 {% endblock %}

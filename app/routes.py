@@ -1,13 +1,19 @@
 import os
 import io
+import time
 from datetime import datetime
 from urllib.parse import quote
 from itertools import groupby
-from flask import Blueprint, render_template, request, session, redirect, url_for, send_from_directory, send_file, flash, g
+from flask import Blueprint, render_template, request, session, redirect, url_for, send_from_directory, send_file, flash, g, jsonify
 from werkzeug.utils import secure_filename
 from . import db, scoring
 
 bp = Blueprint('main', __name__)
+
+# Cache-bust token for static assets (style.css / bet.js). Computed once at import,
+# so it changes on every deploy/restart — guests always get the current JS/CSS
+# instead of a stale cached copy (e.g. an old bet.js that pre-dates inline reveal).
+ASSET_VERSION = str(int(time.time()))
 
 
 @bp.app_context_processor
@@ -16,6 +22,7 @@ def inject_nav_status():
         nav_status=_status(),
         kiosk=session.get('kiosk', False),
         venmo_username=db.get_config('VenmoUsername'),
+        asset_version=ASSET_VERSION,
     )
 
 
@@ -168,9 +175,14 @@ def bet():
 def bet_verify():
     name   = request.form.get('name', '').strip()
     phone4 = request.form.get('phone4', '').strip()
+    # Inline-reveal: the bet page verifies via fetch and then swaps in the bet view
+    # without navigating. Such requests carry X-Requested-With: fetch and want JSON.
+    wants_json = request.headers.get('X-Requested-With') == 'fetch'
 
     result = db.verify_guest(name, phone4)
     if not result['verified']:
+        if wants_json:
+            return jsonify(ok=False, error=result['error'])
         return render_template('bet.html',
             guest_names=db.get_guest_names(),
             status=_status(), error=result['error'], selected_name=name)
@@ -180,6 +192,8 @@ def bet_verify():
         'verified': True, 'has_submitted': result['has_submitted'],
         'submitted_at': result.get('submitted_at'),
     }
+    if wants_json:
+        return jsonify(ok=True)
     return redirect(url_for('main.bet'))
 
 
@@ -188,6 +202,11 @@ def bet_submit():
     guest = session.get('guest')
     if not guest or not guest.get('verified'):
         return redirect(url_for('main.bet'))
+
+    # Inline flow: the bet form submits via fetch and swaps the result into <main>
+    # without navigating. Such requests carry X-Requested-With: fetch and want JSON
+    # pointing at the URL to fetch-and-swap next (mirrors bet_verify).
+    wants_json = request.headers.get('X-Requested-With') == 'fetch'
 
     editing = request.form.get('editing') == '1'
     breed_names = request.form.getlist('breed[]')
@@ -199,6 +218,8 @@ def bet_submit():
 
     result = db.submit_bet(guest['name'], guest['phone4'], breeds, replace=editing)
     if not result['success']:
+        if wants_json:
+            return jsonify(ok=False, error=result['error'])
         return render_template('bet.html',
             show_form=True, editing=editing, guest=guest,
             breeds=db.get_breeds(), status=_status(),
@@ -208,9 +229,13 @@ def bet_submit():
     # iPad to the next guest. Edits stay logged in and return to the Bet Placed screen.
     if session.get('kiosk') and not editing:
         session.pop('guest', None)
+        if wants_json:
+            return jsonify(ok=True, next=url_for('main.bet', thanks=1))
         return redirect(url_for('main.bet', thanks=1))
 
     session['guest'] = {**guest, 'has_submitted': True, 'submitted_at': result.get('submitted_at')}
+    if wants_json:
+        return jsonify(ok=True, next=url_for('main.bet'))
     return redirect(url_for('main.bet'))
 
 
@@ -234,9 +259,17 @@ def kiosk():
 
 @bp.route('/bet/logout', methods=['GET', 'POST'])
 def bet_logout():
-    """Clear the current guest (keeps kiosk flag) — used by Next Guest / idle timer."""
+    """Clear the current guest (keeps kiosk flag) — used by the Log out button."""
     session.pop('guest', None)
     return redirect(url_for('main.bet'))
+
+
+@bp.route('/kiosk/reset')
+def kiosk_reset():
+    """Idle hand-back: drop the current guest and return to the attract screen so a
+    walked-away session never lingers on the shared iPad. Keeps the kiosk flag."""
+    session.pop('guest', None)
+    return redirect(url_for('main.about'))
 
 
 @bp.route('/venmo-qr.png')

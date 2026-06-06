@@ -48,7 +48,7 @@
   <div class="gallery-item">
     <img src="{{ url_for('main.gallery_thumb', filename=img.filename) }}"
          data-full="{{ url_for('main.gallery_img', filename=img.filename) }}"
-         alt="Sparky" loading="lazy"
+         alt="Sparky" loading="{{ 'eager' if kiosk else 'lazy' }}"
          class="gallery-thumb">
   </div>
   {% endfor %}
@@ -57,6 +57,68 @@
 {% endif %}
 </div>{# /.about-photos #}
 </div>{# /.about-layout #}
+
+{% if kiosk %}
+<script>
+(function () {
+  // Lock the frozen-shell to the REAL visible viewport. On iOS Safari a
+  // non-scrolling page (overflow:hidden) reports window.innerHeight as the
+  // toolbar-collapsed (large) height even while the toolbar still occupies
+  // space, so it overestimates. visualViewport.height is the actually-visible
+  // area (excludes the address bar) — use it, falling back to innerHeight.
+  var root = document.documentElement;
+  function visibleH() {
+    return (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  }
+  function setVH() { root.style.setProperty('--kvh', Math.round(visibleH()) + 'px'); }
+  setVH();
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', function () { setVH(); fitBio(); });
+  }
+
+  // Bio is frozen (no scroll), so MAXIMIZE the text: binary-search the largest
+  // font size whose content still fits the card, so it fills the card exactly.
+  var bioCard = document.querySelector('.about-bio .card');
+  function fitBio() {
+    if (!bioCard) return;
+    var lo = 12, hi = 34, best = lo;
+    for (var i = 0; i < 16; i++) {
+      var mid = (lo + hi) / 2;
+      bioCard.style.fontSize = mid + 'px';
+      if (bioCard.scrollHeight <= bioCard.clientHeight) { best = mid; lo = mid; } else { hi = mid; }
+    }
+    bioCard.style.fontSize = best + 'px';
+  }
+  function refit() { setVH(); fitBio(); }
+  fitBio();
+  window.addEventListener('resize', refit);
+  window.addEventListener('orientationchange', refit);
+  window.addEventListener('load', refit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitBio);
+
+  // Hide the "Scroll for more" hint once the photo column is scrolled to the
+  // bottom — or right away if the photos don't overflow (nothing to scroll).
+  var col  = document.querySelector('.about-photos');
+  var hint = document.querySelector('.photos-scroll-hint');
+  if (!col || !hint) return;
+  function update() {
+    var atBottom    = col.scrollTop + col.clientHeight >= col.scrollHeight - 4;
+    var noOverflow  = col.scrollHeight <= col.clientHeight + 4;
+    hint.classList.toggle('is-hidden', atBottom || noOverflow);
+  }
+  col.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  // Each thumbnail changes the column height as it decodes, so re-check on load.
+  col.querySelectorAll('img').forEach(function (img) {
+    if (img.complete) return;
+    img.addEventListener('load', update);
+    img.addEventListener('error', update);
+  });
+  window.addEventListener('load', update);
+  update();
+})();
+</script>
+{% endif %}
 
 {% include '_lightbox.html' %}
 {% endblock %}

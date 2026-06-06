@@ -6,7 +6,8 @@
   <meta name="theme-color" content="#faf9f6">
   <title>{% block title %}Sparky's DNA Bet 🐾{% endblock %}</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐾</text></svg>">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version }}">
+  {% block head %}{% endblock %}
 </head>
 <body>
   <nav class="nav">
@@ -33,9 +34,30 @@
   </main>
   {% if kiosk %}
   <style>html, body { overscroll-behavior: none; }</style>
-  <div style="position:fixed; bottom:10px; right:10px; background:#1f2937; color:#e5e7eb; font-size:0.6rem; padding:0.2rem 0.55rem; border-radius:999px; z-index:50; opacity:0.85; letter-spacing:0.04em; pointer-events:none;">
-    Kiosk mode
-  </div>
+  {# Deliberately low-key: reads "Kiosk mode" until hovered/focused, when it
+     reveals an "Exit" button. Keeps the exit non-obvious to casual guests. #}
+  <a href="{{ url_for('main.kiosk', exit=1) }}" class="kiosk-pill" aria-label="Exit kiosk mode">
+    <span class="kiosk-pill-default">Kiosk mode</span>
+    <span class="kiosk-pill-exit">Exit</span>
+  </a>
+  {# Idle watchdog: if a guest walks away mid-flow, hand the iPad back to the
+     attract screen and clear their session. Skipped when we're already in a clean
+     rest state (no guest + on the attract screen) so the page never self-reloads
+     while someone is reading it. idle_ms is overridable for tests. #}
+  <script>
+  (function () {
+    var IDLE_MS = {{ (request.args.get('idle_ms') or 90000) | int }};
+    var guestActive = {{ 'true' if (session.get('guest') and session.get('guest').get('verified')) else 'false' }};
+    var atAttract = location.pathname === '/' || location.pathname === '/about';
+    if (!guestActive && atAttract) return;
+    var timer;
+    function reset() { window.location.href = '{{ url_for("main.kiosk_reset") }}'; }
+    function poke() { clearTimeout(timer); timer = setTimeout(reset, IDLE_MS); }
+    ['touchstart', 'touchmove', 'pointerdown', 'mousedown', 'keydown', 'click', 'scroll']
+      .forEach(function (e) { window.addEventListener(e, poke, { passive: true, capture: true }); });
+    poke();
+  })();
+  </script>
   {% endif %}
 </body>
 </html>
