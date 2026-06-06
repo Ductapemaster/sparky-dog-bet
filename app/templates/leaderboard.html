@@ -9,12 +9,12 @@
 {% if not status.revealed %}
 <div class="card" style="text-align:center;">
   <div style="font-size:2rem; margin-bottom:0.75rem;">🎲</div>
-  <h3 style="margin-bottom:0.5rem;">Results Not Yet Revealed</h3>
+  <h3 class="card-title" style="text-align:center;">Results Not Yet Revealed</h3>
   <p class="muted">The leaderboard will be revealed at the Reception Dinner on Saturday. Check back then to see where you landed!</p>
 </div>
 {% else %}
 <div class="card">
-  {% if kiosk %}<h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">Leaderboard</h3>{% endif %}
+  {% if kiosk %}<h3 class="card-title">Leaderboard</h3>{% endif %}
   <p class="muted" style="margin-bottom:1rem;">Score is how many percentage points off you are across all breeds — lowest score wins. Breeds not guessed count as 0%. Tap any row to see that person's full breakdown.</p>
   <table>
     <thead>

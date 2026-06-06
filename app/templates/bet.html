@@ -4,7 +4,7 @@
 {% macro scoring_block() %}
   {# Scoring lives at the bottom of the single Rules card (see rules_block). #}
   <hr style="border:none; border-top:1px solid var(--border); margin:1.25rem 0;">
-  <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.5rem;">How Scoring Works</h3>
+  <h3 class="card-title">How Scoring Works</h3>
   <p>
     Your score is how many percentage points off you are across all breeds — <strong>lowest score wins.</strong>
     Breeds you didn't guess count as 0% from you. A perfect guess scores <strong>0 points</strong>.
@@ -12,30 +12,30 @@
 {% endmacro %}
 {% macro rules_block() %}
 <div class="card" style="margin-bottom:1.25rem;">
-  <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">The Rules</h3>
+  <h3 class="card-title">The Rules</h3>
   {% if kiosk %}
-  <p style="margin-bottom:0.55rem;"><strong>Entry fee: $1 per person</strong> — pick whichever is easiest:</p>
-  <div style="display:flex; gap:0.6rem; margin-bottom:0.7rem; flex-wrap:wrap; align-items:stretch;">
+  <p style="margin-bottom:0.75rem;"><strong>Entry fee: $1 per person</strong> — pick whichever is easiest:</p>
+  <div style="display:flex; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap; align-items:stretch;">
     {# ── Cash option ── #}
-    <div style="flex:1 1 150px; border:1px solid var(--border); border-radius:14px; padding:0.65rem 0.6rem; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;">
-      <div style="flex:1; display:flex; align-items:center; justify-content:center; margin-bottom:0.4rem;">
-        <div style="position:relative; width:100px; height:62px; background:#dcfce7; border:2px solid #16a34a; border-radius:9px; display:flex; align-items:center; justify-content:center;">
-          <div style="width:32px; height:32px; border-radius:50%; background:#ffffff; border:2px solid #16a34a; display:flex; align-items:center; justify-content:center; color:#15803d; font-weight:700; font-size:17px; line-height:1;">$</div>
-          <span style="position:absolute; left:8px; top:50%; transform:translateY(-50%); width:6px; height:6px; border-radius:50%; background:#16a34a;"></span>
-          <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); width:6px; height:6px; border-radius:50%; background:#16a34a;"></span>
+    <div style="flex:1 1 150px; border:1px solid var(--border); border-radius:14px; padding:1.1rem 0.75rem; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;">
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; margin-bottom:0.6rem;">
+        <div style="position:relative; width:128px; height:82px; background:#dcfce7; border:2px solid #16a34a; border-radius:11px; display:flex; align-items:center; justify-content:center;">
+          <div style="width:42px; height:42px; border-radius:50%; background:#ffffff; border:2px solid #16a34a; display:flex; align-items:center; justify-content:center; color:#15803d; font-weight:700; font-size:22px; line-height:1;">$</div>
+          <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:7px; height:7px; border-radius:50%; background:#16a34a;"></span>
+          <span style="position:absolute; right:10px; top:50%; transform:translateY(-50%); width:7px; height:7px; border-radius:50%; background:#16a34a;"></span>
         </div>
       </div>
       <div style="font-weight:700;">Pay with cash</div>
-      <p class="muted" style="font-size:0.75rem; margin-top:0.15rem;">Drop $1 in the cash box</p>
+      <p class="muted" style="font-size:0.85rem; margin-top:0.25rem;">Drop $1 in the cash box</p>
     </div>
     {# ── Venmo option ── #}
-    <div style="flex:1 1 150px; border:1px solid var(--border); border-radius:14px; padding:0.65rem 0.6rem; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;">
-      <div style="flex:1; display:flex; align-items:center; justify-content:center; margin-bottom:0.4rem;">
+    <div style="flex:1 1 150px; border:1px solid var(--border); border-radius:14px; padding:1.1rem 0.75rem; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;">
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; margin-bottom:0.6rem;">
         <img src="{{ url_for('main.venmo_qr') }}" alt="Scan this code to pay with Venmo"
-             style="width:94px; height:94px; image-rendering:pixelated;">
+             style="width:130px; height:130px; image-rendering:pixelated;">
       </div>
       <div style="font-weight:700;">Pay with Venmo</div>
-      <p class="muted" style="font-size:0.75rem; margin-top:0.15rem;">Scan this code with your phone</p>
+      <p class="muted" style="font-size:0.85rem; margin-top:0.25rem;">Scan this code with your phone</p>
     </div>
   </div>
   <ul style="padding-left:1.25rem; line-height:2;">
@@ -60,12 +60,14 @@
 {# ── Kiosk: gas-pump confirmation after a NEW bet — the ONE full-width state.
    bet.js detects the missing #bet-panel and swaps the whole <main> for it. ── #}
 {% if kiosk_thanks %}
+<div class="bet-confirm">
 <div class="card" style="text-align:center; margin-bottom:1.25rem;">
   <div style="font-size:2.5rem; margin-bottom:0.5rem;">✅</div>
-  <h3 style="margin-bottom:0.5rem;">Bet locked in — thanks!</h3>
+  <h3 class="card-title" style="text-align:center;">Bet locked in — thanks!</h3>
   <p class="muted" style="margin-bottom:1.25rem;">Your entry is in. Tap below or hand the iPad back when you're done.</p>
   <a href="{{ url_for('main.about') }}" class="btn btn-primary btn-full"
      data-countdown-href="{{ url_for('main.about') }}" data-countdown-seconds="10" data-countdown-label="I'm done">I'm done</a>
+</div>
 </div>
 
 {% else %}
@@ -109,7 +111,7 @@
   {% endif %}
 
   <div class="card" style="margin-bottom:1.25rem;">
-    <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">Your Breed Breakdown</h3>
+    <h3 class="card-title">Your Breed Breakdown</h3>
     <table>
       <thead>
         <tr><th>Breed</th><th style="text-align:right;">Percentage</th></tr>
@@ -127,7 +129,7 @@
 
   {% if actual_results and bet %}
   <div class="card" style="margin-bottom:1.25rem;">
-    <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">How You Did</h3>
+    <h3 class="card-title">How You Did</h3>
     <table>
       <thead>
         <tr><th>Breed</th><th style="text-align:right;">Your Guess</th><th style="text-align:right;">Actual</th><th style="text-align:right;">Points Off</th></tr>
@@ -173,7 +175,7 @@
   {# Kiosk auto-logout: gas-pump countdown (handled by bet.js) returns to the login
      screen so the iPad is ready for the next guest if this one walks away. #}
   <a href="{{ url_for('main.bet_logout') }}" class="btn btn-primary btn-full" style="margin-bottom:1.25rem;"
-     data-countdown-href="{{ url_for('main.bet_logout') }}" data-countdown-seconds="10" data-countdown-label="Log out">
+     data-countdown-href="{{ url_for('main.bet_logout') }}" data-countdown-seconds="30" data-countdown-label="Log out">
     Log out
   </a>
   {% endif %}
@@ -182,7 +184,7 @@
   {% elif locked %}
   <div class="card" style="text-align:center; margin-bottom:1.25rem;">
     <div style="font-size:2rem; margin-bottom:0.75rem;">🔒</div>
-    <h3 style="margin-bottom:0.5rem;">Betting is Closed</h3>
+    <h3 class="card-title" style="text-align:center;">Betting is Closed</h3>
     {% if status.deadline_display %}
     <p class="muted">Betting closed at {{ status.deadline_display }}. The results will be revealed at the Reception Dinner on Saturday!</p>
     {% else %}
@@ -192,7 +194,7 @@
 
   {% if bet %}
   <div class="card" style="margin-bottom:1.25rem;">
-    <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">Your Submission</h3>
+    <h3 class="card-title">Your Submission</h3>
     <table>
       <thead>
         <tr><th>Breed</th><th style="text-align:right;">Percentage</th></tr>
@@ -211,7 +213,7 @@
 
   {% if actual_results and bet %}
   <div class="card" style="margin-bottom:1.25rem;">
-    <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">How You Did</h3>
+    <h3 class="card-title">How You Did</h3>
     <table>
       <thead>
         <tr><th>Breed</th><th style="text-align:right;">Your Guess</th><th style="text-align:right;">Actual</th><th style="text-align:right;">Points Off</th></tr>
@@ -250,10 +252,10 @@
   {# ── Bet form (place or edit) ── #}
   {% elif show_form %}
   <div class="card">
-    <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">{% if editing %}Edit My Bet{% else %}Place My Bet{% endif %}</h3>
+    <h3 class="card-title">{% if editing %}Edit My Bet{% else %}Place My Bet{% endif %}</h3>
     <p style="margin-bottom:1rem;">
-      {% if editing %}Editing bet for{% else %}Placing bet for{% endif %} <strong>{{ guest.name }}</strong>.
-      Assign percentages to one or more breeds — they must add up to exactly <strong>100%</strong>.
+      {% if editing %}Welcome back, <strong>{{ guest.name.split()[0] }}</strong>! Tweak your picks below{% else %}Welcome, <strong>{{ guest.name.split()[0] }}</strong>! Place your bet below{% endif %} —
+      pick one or more breeds whose percentages add up to exactly <strong>100%</strong>. Good luck! 🐾
     </p>
 
     {% if error %}
@@ -336,9 +338,9 @@
   {# ── Identity lookup (login) ── #}
   {% else %}
   <div class="card">
-    <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">Place My Bet</h3>
+    <h3 class="card-title">Place My Bet</h3>
     <p style="margin-bottom:1.25rem;">
-      Find your name to place your bet or view a previously submitted bet.
+      Find your name to place a bet — or to check one you've already submitted.
     </p>
 
     {% if error %}

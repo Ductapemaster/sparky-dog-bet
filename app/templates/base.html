@@ -34,6 +34,20 @@
   </main>
   {% if kiosk %}
   <style>html, body { overscroll-behavior: none; }</style>
+  {# Publish the REAL visible viewport height (--kvh) for every kiosk page so the
+     full-height shells (About bio, bet rules) fill exactly to the bottom.
+     visualViewport.height excludes the Safari toolbar; innerHeight is the fallback. #}
+  <script>
+  (function () {
+    var root = document.documentElement;
+    function vh() { return (window.visualViewport && window.visualViewport.height) || window.innerHeight; }
+    function setVH() { root.style.setProperty('--kvh', Math.round(vh()) + 'px'); }
+    setVH();
+    window.addEventListener('resize', setVH);
+    window.addEventListener('orientationchange', setVH);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', setVH);
+  })();
+  </script>
   {# Deliberately low-key: reads "Kiosk mode" until hovered/focused, when it
      reveals an "Exit" button. Keeps the exit non-obvious to casual guests. #}
   <a href="{{ url_for('main.kiosk', exit=1) }}" class="kiosk-pill" aria-label="Exit kiosk mode">
