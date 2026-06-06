@@ -667,13 +667,38 @@ tr:last-child td { border-bottom: none; }
 
 /* ── Leaderboard expand toggle ───────────────────────────── */
 .lb-row { cursor: pointer; }
-.lb-row.lb-winner { background: var(--blush-soft); }
+/* Winner: green highlight (not orange) so the top guess clearly stands out. */
+.lb-row.lb-winner { background: var(--success-bg); }
+.lb-row.lb-winner td { font-weight: 600; }
+.lb-row.lb-winner .rank { color: var(--success-text); }
 .lb-toggle {
   text-align: right;
   color: var(--muted);
   font-size: 0.8rem;
   white-space: nowrap;
   user-select: none;
+}
+
+/* ── Revealed leaderboard: actual DNA card + ranked board ─────────────────
+   Mobile stacks (actual on top); desktop/kiosk show two columns (actual left). */
+.lb-layout { display: flex; flex-direction: column; gap: 1.25rem; max-width: 1100px; margin: 0 auto; }
+@media (min-width: 900px) {
+  .lb-layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  /* Frozen shell (desktop + kiosk): lock the page to the viewport; the actual-DNA
+     card stays put on the left while only the ranked board scrolls on the right.
+     Mirrors the About shell. Driven by the server-set `lb-shell` class on <html>. */
+  html.lb-shell, html.lb-shell body { height: 100svh; min-height: 100svh; overflow: hidden; }
+  html.lb-shell body { display: flex; flex-direction: column; }
+  html.lb-shell .main { flex: 1; min-height: 0; overflow: hidden; }
+  html.lb-shell .lb-layout { height: 100%; grid-template-rows: minmax(0, 1fr); max-width: 1100px; }
+  html.lb-shell .lb-actual { align-self: start; }              /* short card, top-aligned */
+  html.lb-shell .lb-board  { align-self: stretch; min-height: 0; overflow-y: auto; }
 }
 
 /* ── Detail table: grid layout below 640px ──────────────── */
