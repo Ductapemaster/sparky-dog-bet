@@ -681,7 +681,7 @@ tr:last-child td { border-bottom: none; }
 
 /* ── Revealed leaderboard: actual DNA card + ranked board ─────────────────
    Mobile stacks (actual on top); desktop/kiosk show two columns (actual left). */
-.lb-layout { display: flex; flex-direction: column; gap: 1.25rem; max-width: 1100px; margin: 0 auto; }
+.lb-layout { display: flex; flex-direction: column; gap: 1.5rem; }
 @media (min-width: 900px) {
   .lb-layout {
     display: grid;
@@ -696,10 +696,21 @@ tr:last-child td { border-bottom: none; }
   html.lb-shell, html.lb-shell body { height: 100svh; min-height: 100svh; overflow: hidden; }
   html.lb-shell body { display: flex; flex-direction: column; }
   html.lb-shell .main { flex: 1; min-height: 0; overflow: hidden; }
-  html.lb-shell .lb-layout { height: 100%; grid-template-rows: minmax(0, 1fr); max-width: 1100px; }
+  html.lb-shell .lb-layout { height: 100%; grid-template-rows: minmax(0, 1fr); }
   html.lb-shell .lb-actual { align-self: start; }              /* short card, top-aligned */
   html.lb-shell .lb-board  { align-self: stretch; min-height: 0; overflow-y: auto; }
 }
+
+/* Result-comparison tables (leaderboard breakdown + bet "How You Did"): shrink the
+   numeric columns to their content so the breed column keeps long bucket names
+   (e.g. "Pit Bull (Am Staff / Pit Bull Terrier)") on one line. The ≤640px grid below overrides. */
+.detail-table td:not(:first-child),
+.detail-table th:not(:first-child) { width: 1%; white-space: nowrap; }
+.detail-table th, .detail-table td { padding: 0.4rem 0.45rem; }
+.detail-table th:first-child, .detail-table td:first-child { padding-left: 0; padding-right: 0.5rem; }
+/* Kiosk: the breakdown is dense secondary info — a slightly smaller font keeps the
+   long pit-bull bucket name on one line beside the numeric columns. */
+html.kiosk .detail-table { font-size: 0.82rem; }
 
 /* ── Detail table: grid layout below 640px ──────────────── */
 @media (max-width: 640px) {
@@ -791,8 +802,8 @@ tr:last-child td { border-bottom: none; }
 
   html:not(.kiosk) .about-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 1.1fr;
-    gap: 2rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.5rem;
     align-items: stretch;
     height: 100%;
   }
@@ -924,8 +935,8 @@ html.kiosk .photos-scroll-hint .arrow {
 @media (min-width: 900px) {
   .bet-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) 1fr;
-    gap: 1rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.5rem;
     align-items: start;
   }
   .bet-panel, .bet-info { order: 0; }
