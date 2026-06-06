@@ -279,7 +279,7 @@ def venmo_qr():
     username = (db.get_config('VenmoUsername') or 'Dan-Kouba').lstrip('@')
     # Venmo (or the phone's QR reader) renders encoded spaces as '+', so use
     # hyphens in the note to keep it readable.
-    note = quote('Sparky-Breed-Bet')
+    note = quote('Sparky-Dog-Bet')
     pay_url = f'https://venmo.com/{username}?txn=pay&amount=1&note={note}'
     img = qrcode.make(pay_url)
     buf = io.BytesIO()

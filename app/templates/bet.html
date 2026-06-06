@@ -37,7 +37,7 @@
              style="width:130px; height:130px; image-rendering:pixelated;">
       </div>
       <div style="font-weight:700;">Pay with Venmo</div>
-      <p class="muted" style="font-size:0.85rem; margin-top:0.25rem;">{% if with_link %}Scan or tap <a href="https://venmo.com/u/{{ venmo_username }}" style="white-space:nowrap;">@{{ venmo_username }}</a>{% else %}Scan this code with your phone{% endif %}</p>
+      <p class="muted" style="font-size:0.85rem; margin-top:0.25rem;">{% if with_link %}Scan or tap <a href="https://venmo.com/{{ venmo_username }}?txn=pay&amount=1&note=Sparky-Dog-Bet" style="white-space:nowrap;">@{{ venmo_username }}</a>{% else %}Scan this code with your phone{% endif %}</p>
     </div>
   </div>
 {% endmacro %}
@@ -57,7 +57,7 @@
      link); narrow phones keep the compact text line. Toggled by CSS at 900px. #}
   <div class="pay-cards-desktop">{{ payment_cards(with_link=True) }}</div>
   <ul style="padding-left:1.25rem; line-height:2;">
-    <li class="pay-line-mobile">Entry fee: <strong>$1 per person</strong> (drop your dollar in the cashbox at the betting station, or Venmo <a href="https://venmo.com/u/{{ venmo_username }}">@{{ venmo_username }}</a>)</li>
+    <li class="pay-line-mobile">Entry fee: <strong>$1 per person</strong> (drop your dollar in the cashbox at the betting station, or Venmo <a href="https://venmo.com/{{ venmo_username }}?txn=pay&amount=1&note=Sparky-Dog-Bet">@{{ venmo_username }}</a>)</li>
     <li>Select one or more breeds and assign a percentage to each</li>
     <li>Your percentages must add up to exactly <strong>100%</strong></li>
     <li>One entry per guest — you can edit it any time {% if status.deadline_display %}until {{ status.deadline_display }}{% else %}until betting closes{% endif %}</li>
@@ -364,10 +364,17 @@
   {# ── Identity lookup (login) ── #}
   {% else %}
   <div class="card" style="margin-bottom:1.25rem;">
+    {% if status.locked %}
+    <h3 class="card-title">Betting is Closed</h3>
+    <p style="margin-bottom:1.25rem;">
+      Betting's closed for new bets — find your name to see the bet you submitted.
+    </p>
+    {% else %}
     <h3 class="card-title">Place My Bet</h3>
     <p style="margin-bottom:1.25rem;">
       Find your name to place a bet — or to check one you've already submitted.
     </p>
+    {% endif %}
 
     {% if error %}
     <div class="alert alert-error">{{ error }}</div>
