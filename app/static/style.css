@@ -8,6 +8,8 @@
   --action:       #B4471B;
   --action-dark:  #8F3815;
   --action-pale:  rgba(180,71,27,0.12);
+  --cta:          #2f7d4f;
+  --cta-dark:     #245c3a;
   --blush:        #E3BEB4;
   --blush-soft:   #f5e7df;
   --text:         #2c2c2c;
@@ -219,12 +221,18 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
   /* Base resting shadow so every button reads as a raised, pressable control. */
   box-shadow: 0 2px 8px rgba(9,33,53,0.12);
 }
-.btn-primary   { background: var(--action);   color: #fff;           box-shadow: 0 2px 8px rgba(158,68,35,0.28); }
-.btn-secondary { background: #c6d4e1;         color: var(--primary); box-shadow: 0 2px 8px rgba(9,33,53,0.14); }
+/* Primary = green: the "next step" / CTA color across the guest-facing app. */
+.btn-primary   { background: var(--cta);      color: #fff;           box-shadow: 0 2px 8px rgba(47,125,79,0.28); }
+/* Secondary = a solid medium "denim" blue (white text) — tonally matched to the
+   green/orange (similar lightness), but cool so it still recedes behind the green CTA. */
+.btn-secondary { background: #3f6491;         color: #fff;           box-shadow: 0 2px 8px rgba(22,58,86,0.26); }
+/* Action = orange: kept warm for the kiosk Log out (a non-CTA, hand-back action). */
+.btn-action    { background: var(--action);   color: #fff;           box-shadow: 0 2px 8px rgba(158,68,35,0.28); }
 .btn-danger    { background: var(--error-bg); color: var(--error-text); }
 .btn-warning   { background: #fde68a;         color: #7c2d12;        border: 1.5px solid #d97706; }
-.btn-primary:hover:not(:disabled)   { background: var(--action-dark);  box-shadow: 0 5px 16px rgba(158,68,35,0.34); }
-.btn-secondary:hover:not(:disabled) { background: #b4c5d6;          box-shadow: 0 5px 16px rgba(9,33,53,0.18); }
+.btn-primary:hover:not(:disabled)   { background: var(--cta-dark);     box-shadow: 0 5px 16px rgba(47,125,79,0.34); }
+.btn-action:hover:not(:disabled)    { background: var(--action-dark);  box-shadow: 0 5px 16px rgba(158,68,35,0.34); }
+.btn-secondary:hover:not(:disabled) { background: #34547a;          box-shadow: 0 5px 16px rgba(22,58,86,0.32); }
 .btn-danger:hover:not(:disabled)    { background: #f9d9d9; }
 .btn-warning:hover:not(:disabled)   { background: #fcd34d; }
 /* Lift on hover, press down on active — tactile "click me" feedback for all variants. */
@@ -232,8 +240,8 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
 .btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
 /* Ghost: the quietest tier — for dismissive actions (Cancel/Back). No fill or
    shadow at rest so it never competes with the primary; faint fill on hover. */
-.btn-ghost { background: transparent; color: var(--primary); box-shadow: none; }
-.btn-ghost:hover:not(:disabled) { background: rgba(9,33,53,0.06); box-shadow: none; transform: none; }
+.btn-ghost { background: transparent; color: var(--action); box-shadow: none; }
+.btn-ghost:hover:not(:disabled) { background: var(--action-pale); box-shadow: none; transform: none; }
 .btn-full { width: 100%; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; transform: none; }
 
@@ -364,9 +372,7 @@ tr:last-child td { border-bottom: none; }
 /* ── Hero ────────────────────────────────────────────────── */
 .hero {
   text-align: center;
-  padding: 2.5rem 1.5rem;
-  background: var(--blush-soft);
-  border-radius: 14px;
+  padding: 2rem 1.5rem 1rem;
   margin-bottom: 1.5rem;
 }
 .hero-paw { font-size: 3.5rem; margin-bottom: 0.5rem; }
@@ -531,10 +537,17 @@ tr:last-child td { border-bottom: none; }
 .path-card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; }
 .path-card-desc  { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
 
-/* Primary wayfinding card (Place My Bet) — the dominant action. */
-.path-card--primary { border-color: var(--action); background: var(--action-pale); }
-.path-card--primary .path-card-title { color: var(--action-dark); }
-.path-card--primary:hover { border-color: var(--action); box-shadow: 0 8px 22px rgba(180,71,27,0.18); }
+/* Primary wayfinding card (Place My Bet) — the dominant action, a solid green
+   fill so it reads as THE action (orange/navy already serve as accents). */
+.path-card--primary { border-color: var(--cta-dark); background: var(--cta); color: #fff; }
+.path-card--primary .path-card-title { color: #fff; }
+.path-card--primary .path-card-desc { color: rgba(255,255,255,0.92); }
+.path-card--primary:hover { border-color: var(--cta-dark); background: var(--cta-dark); color: #fff; box-shadow: 0 8px 22px rgba(47,125,79,0.28); }
+/* When betting is locked the card isn't an inviting CTA — go neutral. */
+.path-card--locked { border-color: var(--border); background: var(--card); color: var(--text); }
+.path-card--locked .path-card-title { color: var(--text); }
+.path-card--locked .path-card-desc { color: var(--muted); }
+.path-card--locked:hover { border-color: var(--primary); background: var(--card); box-shadow: var(--shadow); }
 
 /* ── Gallery lightbox / carousel ─────────────────────────── */
 .gallery-thumb { cursor: zoom-in; }

@@ -13,12 +13,12 @@
   <a href="{{ url_for('main.about') }}" class="path-card">
     <div class="path-card-icon">🐕</div>
     <div class="path-card-body">
-      <div class="path-card-title">About Sparky</div>
+      <div class="path-card-title">Learn about Sparky</div>
       <div class="path-card-desc">Meet the pup, see his photos, and study the evidence before you guess.</div>
     </div>
   </a>
   <div class="path-divider">or</div>
-  <a href="{{ url_for('main.bet') }}" class="path-card path-card--primary">
+  <a href="{{ url_for('main.bet') }}" class="path-card path-card--primary{% if nav_status.locked %} path-card--locked{% endif %}">
     <div class="path-card-icon">{% if nav_status.locked %}🔒{% else %}🎯{% endif %}</div>
     <div class="path-card-body">
       <div class="path-card-title">{% if nav_status.locked %}Betting Closed{% else %}Place My Bet{% endif %}</div>
