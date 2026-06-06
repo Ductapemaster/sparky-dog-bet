@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block head %}<script defer src="{{ url_for('static', filename='bet.js') }}?v={{ asset_version }}"></script>{% endblock %}
+{# Kiosk full-height shell via a server-set <html> class (not CSS :has()); the
+   gas-pump confirmation has no .bet-layout so it keeps normal flow. #}
+{% block html_class %}{% if kiosk and not kiosk_thanks %}bet-shell{% elif not kiosk_thanks %}page-wide{% endif %}{% endblock %}
 {% block content %}
 {% macro scoring_block() %}
   {# Scoring lives at the bottom of the single Rules card (see rules_block). #}

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"{% if kiosk %} class="kiosk"{% endif %}>
+<html lang="en" class="{% if kiosk %}kiosk {% endif %}{% block html_class %}{% endblock %}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -55,15 +55,16 @@
     <span class="kiosk-pill-exit">Exit</span>
   </a>
   {# Idle watchdog: if a guest walks away mid-flow, hand the iPad back to the
-     attract screen and clear their session. Skipped when we're already in a clean
-     rest state (no guest + on the attract screen) so the page never self-reloads
-     while someone is reading it. idle_ms is overridable for tests. #}
+     attract screen and clear their session. Only armed when a guest is logged in
+     AND on a betting page (/bet…) — never on the attract/leaderboard/gallery
+     screens or the logged-out login screen, so those never self-reload while
+     someone is reading them. idle_ms is overridable for tests. #}
   <script>
   (function () {
     var IDLE_MS = {{ (request.args.get('idle_ms') or 90000) | int }};
     var guestActive = {{ 'true' if (session.get('guest') and session.get('guest').get('verified')) else 'false' }};
-    var atAttract = location.pathname === '/' || location.pathname === '/about';
-    if (!guestActive && atAttract) return;
+    var onBetPage = location.pathname.indexOf('/bet') === 0;
+    if (!(guestActive && onBetPage)) return;
     var timer;
     function reset() { window.location.href = '{{ url_for("main.kiosk_reset") }}'; }
     function poke() { clearTimeout(timer); timer = setTimeout(reset, IDLE_MS); }
@@ -73,5 +74,24 @@
   })();
   </script>
   {% endif %}
+  {# Frozen-shell pages (desktop About / Leaderboard at ≥900px) keep a side panel
+     fixed and scroll one column. Forward wheel events from anywhere on the page to
+     that column ([data-shell-scroll]) so scrolling works from anywhere — unless the
+     cursor is over an element that needs to scroll itself (e.g. a tall bio on a
+     short window). Only attaches on pages that have such a scroll region. #}
+  <script>
+  (function () {
+    var region = document.querySelector('[data-shell-scroll]');
+    if (!region) return;
+    var mq = window.matchMedia('(min-width: 900px)');
+    document.addEventListener('wheel', function (e) {
+      if (!mq.matches) return;
+      var hovered = e.target.closest && e.target.closest('[data-shell-scroll], .about-bio .card, .lb-actual .card');
+      if (hovered && hovered.scrollHeight > hovered.clientHeight + 1) return;
+      region.scrollTop += e.deltaY * (e.deltaMode === 1 ? 16 : 1);
+      e.preventDefault();
+    }, { passive: false });
+  })();
+  </script>
 </body>
 </html>

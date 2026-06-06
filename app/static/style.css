@@ -41,12 +41,12 @@ a { color: var(--primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 /* Content links: clearly distinct from body text — action-colored + always underlined. */
-.main a:not(.btn):not(.path-card):not(.nav-link) {
+.main a:not(.btn):not(.path-card):not(.nav-link):not(.photos-banner) {
   color: var(--action);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.main a:not(.btn):not(.path-card):not(.nav-link):hover {
+.main a:not(.btn):not(.path-card):not(.nav-link):not(.photos-banner):hover {
   color: var(--action-dark);
 }
 
@@ -130,7 +130,7 @@ a:hover { text-decoration: underline; }
 
 /* ── Layout ────────────────────────────────────────────── */
 .main {
-  max-width: 700px;
+  max-width: 760px;
   margin: 2rem auto;
   padding: 0 1rem;
 }
@@ -143,21 +143,31 @@ a:hover { text-decoration: underline; }
   box-shadow: var(--shadow);
 }
 
+/* Unified with .card-title: one compact heading style across every view
+   (the old large underlined section title is dropped site-wide). */
 .section-title {
-  font-size: 1.5rem;
+  font-size: 1.05rem;
   font-weight: 700;
+  line-height: 1.3;
   color: var(--text);
-  margin-bottom: 1rem;
+  margin: 0 0 0.75rem;
 }
-.section-title::after {
-  content: "";
+
+/* Mobile-only cue pointing down to the About photos (which sit below the bio). */
+.photos-banner {
   display: block;
-  width: 42px;
-  height: 3px;
+  text-align: center;
   background: var(--action);
-  border-radius: 2px;
-  margin-top: 0.4rem;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+  text-decoration: none;
 }
+.photos-banner:hover, .photos-banner:focus { color: #fff; text-decoration: none; opacity: 0.95; }
+@media (min-width: 641px) { .photos-banner { display: none; } }
 
 .muted { color: var(--muted); }
 
@@ -734,6 +744,48 @@ tr:last-child td { border-bottom: none; }
   .path-card-desc  { font-size: 0.82rem; line-height: 1.35; }
 }
 
+/* ── Desktop side-by-side (non-kiosk wide screens) ─────────────────────────
+   The About and Bet pages carry a `page-wide` class on <html>; give those pages
+   a roomier container so their two-column layouts breathe, while the rest of the
+   site keeps the narrow 700px column. Wider margins than the iPad's full-bleed
+   kiosk layout, per the comfort note. */
+@media (min-width: 900px) {
+  /* A touch wider, and viewport-relative so the page grows/shrinks proportionally
+     with the window (caps at 1200px on very large screens). */
+  html.page-wide .main { max-width: min(92vw, 1200px); }
+
+  /* About (desktop) mirrors the kiosk's frozen shell: the bio fills the left
+     column and stays put while only the photo column scrolls. Gated to ≥900px so
+     phones keep the normal stacked, page-scrolling flow. Visual only — desktop
+     never inherits kiosk *functionality* (auto-logout, etc.). Driven by the
+     server-set `about-deskshell` class on <html>. */
+  html.about-deskshell,
+  html.about-deskshell body { height: 100svh; min-height: 100svh; overflow: hidden; }
+  html.about-deskshell body { display: flex; flex-direction: column; }
+  html.about-deskshell .main { flex: 1; min-height: 0; overflow: hidden; }
+
+  html:not(.kiosk) .about-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 1.1fr;
+    gap: 2rem;
+    align-items: stretch;
+    height: 100%;
+  }
+  /* Bio: frozen left column; JS (fitBio) sizes the text to fill it with no scroll.
+     Heading + paragraph spacing are em-based so they scale with that font size. */
+  html:not(.kiosk) .about-bio { height: 100%; min-height: 0; }
+  html:not(.kiosk) .about-bio .card {
+    height: 100%;
+    overflow: hidden;
+    margin-bottom: 0 !important;
+  }
+  html:not(.kiosk) .about-bio .card h3 { font-size: 1.15em; margin-bottom: 0.5em !important; }
+  html:not(.kiosk) .about-bio .card p  { margin-bottom: 0.6em !important; }
+  html:not(.kiosk) .about-bio .card p:last-child { margin-bottom: 0 !important; }
+  /* Photos: the lone scroll region. */
+  html:not(.kiosk) .about-photos { height: 100%; min-height: 0; overflow-y: auto; }
+}
+
 /* ── Kiosk mode: larger type + wider layout for a shared landscape iPad ──
    The shared device is read from a short distance, so everything scales up.
    The whole UI is rem-based, so bumping the root font-size enlarges type,
@@ -750,7 +802,6 @@ html.kiosk .main      { max-width: none; margin: 0.4rem auto 0.5rem; padding: 0 
 html.kiosk .nav       { padding: 0.4rem 1.1rem; }
 html.kiosk .nav-brand { font-size: 1.15rem; }
 html.kiosk .nav-link  { font-size: 1rem; padding: 0.4rem 0.9rem; }
-html.kiosk .section-title { font-size: 1.4rem; margin-bottom: 0.45rem; }
 html.kiosk .card      { padding: 1.25rem 1.5rem; }
 html.kiosk .gallery-grid {
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -762,12 +813,16 @@ html.kiosk .lb-strip-thumb { width: 4rem; height: 4rem; }
    The bio is frozen and ONLY the photo column scrolls. To pull that off we turn the
    kiosk About page into a fixed-height app shell: the whole page is locked to the
    viewport height (no document scroll), and the photo column is the lone scroll
-   region. Scoped with :has(.about-layout) so other kiosk pages keep normal scrolling. */
-html.kiosk:has(.about-layout),
-html.kiosk body:has(.about-layout) { height: var(--kvh, 100svh); overflow: hidden; }
-html.kiosk body:has(.about-layout) { display: flex; flex-direction: column; }
+   region. Driven by the server-set .about-shell class on <html> (NOT a CSS
+   :has() selector — iOS Safari did not honor the :has()-based shell). */
+html.about-shell,
+/* Override the base `body { min-height: 100vh }` (line 36) — otherwise body is
+   pinned to the LARGE viewport (100vh) while html clamps to 100svh, so body
+   overflows html by the toolbar height and the bottom strip gets clipped. */
+html.about-shell body { height: 100svh; min-height: 100svh; overflow: hidden; }
+html.about-shell body { display: flex; flex-direction: column; }
 /* The nav stays put (sticky, first flex child); .main fills the rest and clips. */
-html.kiosk body:has(.about-layout) .main { flex: 1; min-height: 0; overflow: hidden; }
+html.about-shell .main { flex: 1; min-height: 0; overflow: hidden; }
 
 html.kiosk .about-layout {
   display: grid;
@@ -833,6 +888,14 @@ html.kiosk .photos-scroll-hint .arrow {
    #bet-panel on the right. Width-driven so BOTH kiosk and regular desktop get it
    (≥900px); below that it stays a stacking block (phone keeps today's flow).
    The kiosk flag only governs behavior/density, not the columns. */
+/* Mobile-first: bet card on TOP, rules below — the bet card is small, so after
+   login the changed card is right at the top (the page scrolls to top on swap)
+   and the rules read as "more below". */
+.bet-layout { display: flex; flex-direction: column; }
+.bet-panel { order: 0; }
+.bet-info  { order: 1; }
+/* Wide screens (kiosk + desktop): two columns — rules left, panel right.
+   Single boundary (no 1px gap); order reset so DOM order drives the columns. */
 @media (min-width: 900px) {
   .bet-layout {
     display: grid;
@@ -840,16 +903,19 @@ html.kiosk .photos-scroll-hint .arrow {
     gap: 1rem;
     align-items: start;
   }
+  .bet-panel, .bet-info { order: 0; }
 }
 /* Kiosk bet page is a full-height shell like About: the rules card fills the
    screen on the left, and the right panel (#bet-panel) is the lone scroll region.
-   Scoped with :has(.bet-layout) so the gas-pump confirmation (no .bet-layout)
-   keeps normal flow. */
-html.kiosk:has(.bet-layout),
-html.kiosk body:has(.bet-layout) { height: var(--kvh, 100svh); overflow: hidden; }
-html.kiosk body:has(.bet-layout) { display: flex; flex-direction: column; }
-html.kiosk body:has(.bet-layout) .main { flex: 1; min-height: 0; overflow: hidden; }
-html.kiosk:has(.bet-layout) .bet-layout { height: 100%; align-items: stretch; }
+   Driven by the server-set .bet-shell class on <html> (only on the form view,
+   not the gas-pump confirmation) — NOT a CSS :has() selector (iOS Safari did
+   not honor it). */
+html.bet-shell,
+/* Override base `body { min-height: 100vh }` (see .about-shell note above). */
+html.bet-shell body { height: 100svh; min-height: 100svh; overflow: hidden; }
+html.bet-shell body { display: flex; flex-direction: column; }
+html.bet-shell .main { flex: 1; min-height: 0; overflow: hidden; }
+html.bet-shell .bet-layout { height: 100%; align-items: stretch; }
 html.kiosk .bet-info { height: 100%; min-height: 0; }
 html.kiosk .bet-info > .card { height: 100%; overflow-y: auto; margin-bottom: 0 !important; }
 html.kiosk .bet-panel { height: 100%; min-height: 0; overflow-y: auto; }
