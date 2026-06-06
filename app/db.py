@@ -179,7 +179,13 @@ def deadline_display():
 
 
 def betting_is_locked():
-    """Single source of truth: manually locked OR past the auto-lock deadline."""
+    """Single source of truth for whether betting is closed.
+
+    Locked if results are revealed (we always lock before revealing, so a reveal
+    forces the lock), manually locked, or past the auto-lock deadline.
+    """
+    if is_true(get_config('ResultsRevealed')):
+        return True
     if is_true(get_config('BettingLocked')):
         return True
     deadline = get_deadline()

@@ -71,18 +71,22 @@
     <div class="toggle-row">
       <div class="toggle-info">
         <strong>Betting</strong>
-        <span>Lock to stop new submissions</span>
+        <span>{% if status.revealed %}Locked automatically while results are shown — hide results to reopen{% else %}Lock to stop new submissions{% endif %}</span>
       </div>
+      {% if status.revealed %}
+      <button type="button" class="btn btn-secondary" disabled>Locked</button>
+      {% else %}
       <form method="post" action="{{ url_for('main.admin_toggle', key='BettingLocked') }}">
         <button type="submit" class="btn {{ 'btn-danger' if status.locked else 'btn-secondary' }}">
           {{ 'Unlock Betting' if status.locked else 'Lock Betting' }}
         </button>
       </form>
+      {% endif %}
     </div>
     <div class="toggle-row">
       <div class="toggle-info">
         <strong>Results</strong>
-        <span>Reveal leaderboard to guests</span>
+        <span>{% if status.revealed %}Guests can see the leaderboard{% else %}Reveal the leaderboard to guests — this also locks betting{% endif %}</span>
       </div>
       <form method="post" action="{{ url_for('main.admin_toggle', key='ResultsRevealed') }}">
         <button type="submit" class="btn {{ 'btn-danger' if status.revealed else 'btn-secondary' }}">

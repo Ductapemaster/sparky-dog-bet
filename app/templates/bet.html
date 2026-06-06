@@ -115,9 +115,17 @@
       </div>
       <div class="muted" style="font-size:0.8rem;">{{ guest.submitted_at or '' }}</div>
     </div>
+    {% if status.locked %}
+    <p style="margin-top:0.75rem; margin-bottom:0; color: var(--success-text); font-size:0.9rem;">
+      Betting's closed, so your bet is locked in. We'll reveal Sparky's results at the reception — good luck!
+    </p>
+    {% endif %}
   </div>
   {% endif %}
 
+  {# Once results are revealed, "How You Did" below already lists the breakdown,
+     so this standalone breakdown is redundant — only show it pre-reveal. #}
+  {% if not (actual_results and bet) %}
   <div class="card" style="margin-bottom:1.25rem;">
     <h3 class="card-title">Your Breed Breakdown</h3>
     <table>
@@ -201,9 +209,9 @@
     <div style="font-size:2rem; margin-bottom:0.75rem;">🔒</div>
     <h3 class="card-title" style="text-align:center;">Betting is Closed</h3>
     {% if status.deadline_display %}
-    <p class="muted">Betting closed at {{ status.deadline_display }}. The results will be revealed at the Reception Dinner on Saturday!</p>
+    <p class="muted">It closed at {{ status.deadline_display }}. We'll reveal Sparky's results at the reception — check back then!</p>
     {% else %}
-    <p class="muted">The results will be revealed at the Reception Dinner on Saturday!</p>
+    <p class="muted">We'll reveal Sparky's results at the reception — check back then!</p>
     {% endif %}
   </div>
 
