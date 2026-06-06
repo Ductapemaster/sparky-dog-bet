@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Admin — Sparky's DNA Bet{% endblock %}
+{# Plain, utilitarian admin look — the `admin` root class de-themes the whole page
+   (background, nav, cards) to standard colors via the html.admin rules in style.css. #}
+{% block html_class %}admin{% endblock %}
 
 
 {% block nav_links %}
@@ -94,12 +97,12 @@
         </button>
       </form>
     </div>
-    <div style="border-top:1px solid var(--border); margin-top:0.75rem; padding-top:0.75rem;">
+    <div style="margin-top:0.75rem; padding-top:0.75rem;">
       <div class="toggle-info" style="margin-bottom:0.5rem;">
         <strong>Auto-Lock Deadline</strong>
         <span>
           {% if status.deadline_display %}
-            Betting auto-closes at <strong>{{ status.deadline_display }}</strong>{% if status.locked and not status.manual_locked %} — <span style="color:#b91c1c;">passed, betting is now closed</span>{% endif %}.
+            Betting auto-closes at <strong>{{ status.deadline_display }}</strong>{% if status.locked and not status.manual_locked %} — <span style="color:#b91c1c;">passed, betting is now closed</span>{% endif %}
           {% else %}
             No deadline set — betting stays open until you lock it manually.
           {% endif %}
@@ -124,16 +127,6 @@
         Times are in Pacific (event timezone). The manual Lock above always overrides the deadline.
       </p>
     </div>
-  </div>
-
-  <div class="card" style="margin-bottom:1.5rem;">
-    <h3 class="admin-sh">Kiosk Mode</h3>
-    <p class="muted" style="font-size:0.85rem; margin-bottom:0.5rem;">
-      On the shared event iPad, open <a href="{{ url_for('main.kiosk') }}"><strong>/kiosk</strong></a> once.
-      That device will then require a fresh login per guest, hide the Venmo link in favor of a scannable QR
-      code, and never show or let anyone edit a previous guest's bet. To turn it off on a device, open
-      <strong>/kiosk?exit=1</strong> there.
-    </p>
   </div>
 
   <div class="card" style="margin-bottom:1.5rem;">
