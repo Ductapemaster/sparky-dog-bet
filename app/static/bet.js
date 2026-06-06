@@ -35,14 +35,28 @@
 
     function getOpts() { return listbox.querySelectorAll('[role=option]'); }
 
+    // Breeds already chosen in OTHER rows (lowercased), so we can keep this row's
+    // dropdown from offering a duplicate.
+    function takenElsewhere() {
+      var taken = [];
+      document.querySelectorAll('.breed-combo').forEach(function (other) {
+        if (other === input) return;
+        var v = other.value.trim().toLowerCase();
+        if (v) taken.push(v);
+      });
+      return taken;
+    }
+
     function renderOpts(q) {
       var ql = q.toLowerCase();
+      var taken = takenElsewhere();
+      var pool = BREEDS.filter(function (b) { return taken.indexOf(b.toLowerCase()) === -1; });
       var filtered = q.length
-        ? BREEDS.filter(function (b) {
+        ? pool.filter(function (b) {
             var hay = (b + ' ' + (BREED_ALIASES[b] || '')).toLowerCase();
             return hay.indexOf(ql) !== -1;
           })
-        : BREEDS;
+        : pool;
       listbox.innerHTML = '';
       activeIdx = -1;
       filtered.forEach(function (name) {
@@ -58,33 +72,14 @@
 
     function pick(name) {
       input.value = name;
-      input.dataset.valid = 'true';
-      if (errorEl) errorEl.hidden = true;
-      input.classList.remove('breed-invalid');
       close();
+      applyBreedState(input);    // validates this row (incl. duplicate check)
+      revalidateBreeds(input);   // a sibling may now be the matching duplicate
       updateFormState();
     }
 
     function open() { renderOpts(input.value); listbox.hidden = false; }
     function close() { listbox.hidden = true; activeIdx = -1; }
-
-    function validateOnBlur() {
-      var val = input.value.trim();
-      if (val && BREEDS_LOWER.indexOf(val.toLowerCase()) !== -1) {
-        input.dataset.valid = 'true';
-        input.classList.remove('breed-invalid');
-        if (errorEl) errorEl.hidden = true;
-      } else if (val) {
-        input.dataset.valid = 'false';
-        input.classList.add('breed-invalid');
-        if (errorEl) errorEl.hidden = false;
-      } else {
-        input.dataset.valid = 'false';
-        input.classList.remove('breed-invalid');
-        if (errorEl) errorEl.hidden = true;
-      }
-      updateFormState();
-    }
 
     function highlight(idx) {
       var opts = getOpts();
@@ -98,7 +93,7 @@
 
     input.addEventListener('focus', open);
     input.addEventListener('click', function () { if (listbox.hidden) open(); });
-    input.addEventListener('blur', function () { close(); validateOnBlur(); });
+    input.addEventListener('blur', function () { close(); applyBreedState(input); revalidateBreeds(input); updateFormState(); });
     input.addEventListener('input', function () {
       input.dataset.valid = 'false';
       input.classList.remove('breed-invalid');
@@ -124,6 +119,46 @@
       } else if (e.key === 'Tab' && !listbox.hidden && activeIdx >= 0 && opts[activeIdx]) {
         pick(opts[activeIdx].textContent);
       }
+    });
+  }
+
+  // Classify a single breed input (empty / not-recognized / duplicate / ok) and
+  // reflect it in the UI: the data-valid flag (read by updateFormState to gate the
+  // submit button), the breed-invalid class, and the row's error message.
+  function applyBreedState(input) {
+    var row     = input.closest('.breed-row');
+    var errorEl = row ? row.querySelector('.breed-error') : null;
+    var val     = input.value.trim();
+    var msg     = '';
+    var valid   = false;
+    if (!val) {
+      // empty — neutral, no error
+    } else if (BREEDS_LOWER.indexOf(val.toLowerCase()) === -1) {
+      msg = 'Please select a breed from the list.';
+    } else {
+      var dup = false;
+      document.querySelectorAll('.breed-combo').forEach(function (other) {
+        if (other === input) return;
+        if (other.value.trim().toLowerCase() === val.toLowerCase()) dup = true;
+      });
+      if (dup) msg = 'You already picked this breed — choose a different one.';
+      else valid = true;
+    }
+    input.dataset.valid = valid ? 'true' : 'false';
+    input.classList.toggle('breed-invalid', !!msg);
+    if (errorEl) {
+      if (msg) { errorEl.textContent = msg; errorEl.hidden = false; }
+      else errorEl.hidden = true;
+    }
+  }
+
+  // Re-validate every breed input except the one being actively typed in (so a
+  // half-typed value isn't prematurely flagged). Used after pick / blur / remove,
+  // since changing one row can resolve or create a duplicate in another.
+  function revalidateBreeds(except) {
+    document.querySelectorAll('.breed-combo').forEach(function (inp) {
+      if (inp === except || inp === document.activeElement) return;
+      applyBreedState(inp);
     });
   }
 
@@ -190,6 +225,7 @@
   function removeRow(btn) {
     if (document.querySelectorAll('.breed-row').length > 1) {
       btn.closest('.breed-row').remove();
+      revalidateBreeds();   // a remaining row may no longer be a duplicate
       updateFormState();
       updateRemoveButtons();
     }
