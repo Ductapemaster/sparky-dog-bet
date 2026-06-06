@@ -188,6 +188,8 @@ Ties broken by earlier `submitted_at` timestamp. Score kept to 1 decimal place.
 
 - `db.is_true(val)` normalises boolean config values
 - `_submit_lock` (threading.Lock) + `_get_db_exclusive()` (BEGIN IMMEDIATE) together prevent double-submission: the lock guards same-process threads; BEGIN IMMEDIATE makes the re-check + write atomic across all Gunicorn workers
+- `db.get_all_bets_for_scoring()` loads all submitted guests' bets in one JOIN query — used by `scoring.get_leaderboard()` to avoid N+1 queries
+- `_status()` in `routes.py` caches its result in Flask's `g`, so config is read from SQLite only once per request (the context processor and route handlers all call it)
 - `db._gallery_dir()` returns the gallery image directory (`data/gallery/` by default)
 - `db._thumbs_dir()` / `db._display_dir()` — derived image subdirectories
 - `db._thumb_filename(f)` / `db._display_filename(f)` — converts any filename to `{stem}.webp`
@@ -250,7 +252,7 @@ python wsgi.py              # local debug server at http://localhost:8000
 
 ## Deployment & Connectivity
 
-- DB and gallery images persist via a named Docker volume (`sparky_db` → `/app/data`)
+- DB and gallery images persist via a bind mount (`./data` → `/app/data`) — copy the `data/` folder when moving the app to a new machine
 - Container binds to host port **9999** → gunicorn on 8000
 - **Cloudflare Tunnel**: a `cloudflared` container on the host routes `sparky.koubalabs.com`
   → `http://localhost:9999`. Configured via Cloudflare Zero Trust dashboard (token-based,

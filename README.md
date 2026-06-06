@@ -6,7 +6,7 @@
 - **SQLite** — database via Python's stdlib `sqlite3` (no ORM)
 - **Gunicorn + gevent** — WSGI server, 2 workers × 100 connections (non-blocking I/O)
 - **Pillow** — WebP thumbnail and display image generation
-- **Docker** + **Docker Compose** — containerized deployment; SQLite file and gallery images persist via a named volume mounted at `/app/data`
+- **Docker** + **Docker Compose** — containerized deployment; SQLite file and gallery images persist via a bind mount (`./data` → `/app/data`)
 - **Cloudflare Tunnel** — exposes the app publicly via `sparky.koubalabs.com`; gallery image routes are edge-cached for 24 hours
 
 ## Project Structure
