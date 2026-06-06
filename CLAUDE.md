@@ -135,9 +135,10 @@ tie-breaks). The `BettingLocked` check inside `submit_bet` enforces the edit win
 ## Responsive Modes (kiosk / phone / desktop)
 
 The UI renders in three visual modes. **Kiosk is the only one with distinct *behavior*;**
-phone and desktop differ from each other only by viewport-driven CSS. Design intent: we may
-later let **desktop adopt the kiosk *visual layout*, but desktop must NOT get kiosk
-*functionality*** (auto-logout, gas-pump handoff, no-store caching, etc.).
+phone and desktop differ from each other only by viewport-driven CSS. **Desktop now also
+adopts the kiosk *visual layout*** (the frozen-shell two-column About and revealed Leaderboard
+— see "UI / Design System" below), but desktop must **NOT** get kiosk *functionality*
+(auto-logout, gas-pump handoff, no-store caching, etc.), which stays gated on `html.kiosk`.
 
 **Mode detection**
 - **Kiosk** — opt-in per device. Visit `/kiosk` to set `session['kiosk']=True` (cleared via
@@ -164,16 +165,74 @@ later let **desktop adopt the kiosk *visual layout*, but desktop must NOT get ki
 
 **Kiosk-only VISUAL layout** (`html.kiosk …` rules at the end of `style.css`):
 - Large type (root 21px), minimal outer margins, full-width container (`max-width: none`),
-  comfortable in-card padding; page titles relocated to internal card `<h3>`s.
-- **About** (`.about-layout`): two columns — a sticky/"frozen" 640px bio on the left, a
-  3-column photo grid on the right, with a sticky "Scroll for more ↓" overlay
-  (`.photos-scroll-hint`).
-- **Place My Bet** login (`.bet-login-layout`): Rules+Scoring left, login form right.
-- **Leaderboard** (`.lb-page`): stays a single centered ~820px card (not full-width).
+  comfortable in-card padding.
+- **About**: frozen ~640px bio left, 3-column photo grid right, sticky "Scroll for more ↓"
+  overlay (`.photos-scroll-hint`).
+
+The two-column frozen-shell treatments (About, Bet rules+panel, revealed Leaderboard) now also
+apply to **desktop** via shared `<html>` classes, and title-inside-card is now site-wide (all
+modes) — see **UI / Design System** below for the authoritative details.
 
 **Shared photo carousel** (`templates/_lightbox.html`, used by About + Gallery in *all* modes):
 arrows + swipe + a thumbnail filmstrip that highlights the active photo. Reads `data-full`
 (display image) off the clicked `.gallery-thumb`.
+
+## UI / Design System
+
+Cross-cutting visual conventions (all modes unless noted). Kiosk-specific *behavior* is under
+"Responsive Modes" above.
+
+### Button color roles (`style.css` `.btn-*`)
+- **Green = primary CTA / "next step"** — `.btn-primary` (`--cta #2f7d4f` / `--cta-dark`):
+  Continue, Submit, kiosk "I'm done".
+- **Orange = `.btn-action`** (`--action`) for **Log out** (a hand-back, not a CTA); the
+  **ghost** button (`.btn-ghost`, Cancel) is also orange.
+- **Denim blue = `.btn-secondary`** (`#3f6491`, white text): Add Another Breed, Edit My Bet.
+- **Admin buttons are themed separately** in `admin.html`'s own `<style>` (`.main .btn-*` →
+  green save / slate neutral / red delete / amber wipe). Editing the global `.btn-*` does NOT
+  change admin buttons.
+
+### Frozen-shell layout (server-set `<html>` classes — NOT CSS `:has()`)
+iOS Safari did not honor `:has()`, so each shell is driven by a class set in the template's
+`{% block html_class %}`. A shell locks the page to the viewport
+(`height:100svh; overflow:hidden`, body flex-column, `.main { flex:1; overflow:hidden }`) and
+makes ONE column the lone scroll region:
+
+| Class | Page / mode | Fixed panel | Scroll region |
+|-------|-------------|-------------|---------------|
+| `about-shell` | kiosk About | bio (left) | photos (right) |
+| `about-deskshell` | desktop About, `@media (min-width:900px)` | bio (left) | photos (right) |
+| `bet-shell` | kiosk Bet form (not the gas-pump confirmation) | rules (left) | `#bet-panel` (right) |
+| `lb-shell` | revealed Leaderboard, kiosk + desktop ≥900px | actual-DNA card (left) | board (right) |
+| `page-wide` | About / Bet / revealed Leaderboard (non-kiosk) | — | widens `.main` to `min(92vw, 1200px)` |
+
+- Below 900px every shell falls back to normal page scroll (mobile stacks).
+- **`fitBio()`** (inline JS in `about.html`) binary-searches the largest bio font that fits the
+  fixed card: kiosk ≤34px; desktop **floor 18px / cap 26px**, and if it can't fit at 18px on a
+  very short window it lets the bio scroll instead of clipping.
+- **Scroll-anywhere:** the scroll column carries `data-shell-scroll`; a wheel-forwarding script
+  in `base.html` forwards wheel events from anywhere on the page to it (≥900px), unless the
+  cursor is over a self-scrollable panel. Only attaches if `[data-shell-scroll]` exists.
+
+### Other conventions
+- **Title-inside-card (all modes):** section titles render as `<h3 class="card-title">` inside
+  the card; no standalone `<h2 class="section-title">` above. The About "Photos" heading was
+  removed entirely.
+- **`.main` width:** base `760px`; `html.page-wide .main` scales to `min(92vw, 1200px)` ≥900px.
+- **Admin = plain utilitarian theme:** `admin.html` sets `html_class = admin`; an `html.admin`
+  section at the END of `style.css` overrides the wedding theme with neutral standard colors
+  across the whole page (incl. nav), keeping the color-coded action buttons.
+- **Leaderboard (revealed):** two equal columns — "Sparky's Actual DNA" card (top on mobile /
+  left on desktop+kiosk) + ranked board; winner highlighted green (`--success-bg`) and
+  **auto-expanded**; score totals show just the number (the column header already says "Pts").
+
+### Betting lock / reveal invariant
+`db.betting_is_locked()` returns **True whenever results are revealed** (in addition to manual
+`BettingLocked` and the auto-lock deadline). Operator workflow is **lock first, then reveal**;
+the invariant guarantees results are never shown while betting is open. The admin Game Controls
+reflect it (Betting shows a disabled "Locked" while results are up; "Reveal" notes it also
+locks betting). A submitted guest on a locked-but-not-revealed page sees a clear "Betting's
+closed — your bet is locked in" note, not just the title 🔒.
 
 ## Scoring Algorithm
 
@@ -221,22 +280,45 @@ git add -A && git commit    # commit once check passes
 
 | Command | Does |
 |---------|------|
-| `./dev.sh check` | lint + build/deploy + health + smoke + **e2e** (kiosk + mobile). The pre-"done" gate. |
+| `./dev.sh check` | lint + build/deploy + health + smoke + **e2e** (kiosk + mobile + desktop + states). The pre-"done" gate. |
 | `./dev.sh up` | build + deploy + wait until healthy |
 | `./dev.sh lint` | fast syntax gate (`py_compile` + `node --check`), no deploy |
 | `./dev.sh smoke` | HTTP 200 on key routes |
-| `./dev.sh test [kiosk\|mobile\|states\|all]` | run the e2e harness only (app must be up) |
+| `./dev.sh test [kiosk\|mobile\|desktop\|states\|all]` | run the e2e harness only (app must be up) |
 | `./dev.sh logs` | follow container logs |
 
 The e2e suite is the Playwright harness in `tests/kiosk-visual/` (see its `run.sh`),
 driving the real UI in Dockerized Chromium:
-- **kiosk** (iPad Pro 12.9") & **mobile** (iPhone portrait) — sizing + login → inline
-  place-bet → gas-pump auto-logout → inline edit → logout + the photo carousel, run
-  against the live app with a throwaway guest it cleans up.
+- **kiosk** (iPad Pro 12.9") & **mobile** (iPhone portrait) & **desktop** (1280×900, non-kiosk
+  two-column) — sizing + login → inline place-bet → (gas-pump auto-logout on kiosk) → inline
+  edit → logout + the photo carousel, run against the live app with a throwaway guest it
+  cleans up.
 - **states** — admin lock/unlock + reveal/hide via the real admin UI, and the kiosk's
   view of each state (🔒 nav, "Betting is Closed", ranked leaderboard, "How You Did").
   Because these toggle *global* config, it spins up an **isolated instance on :9998**
   with a fresh seeded DB and tears it down — never touching the live game.
+
+> ⚠️ **The live-driven suites (kiosk/mobile/desktop) assume the live game is in its NORMAL
+> state — betting OPEN and results HIDDEN.** If the live instance is locked or revealed (e.g.
+> someone flipped it to preview the leaderboard), the bet-flow checks fail *environmentally*
+> (not real regressions). Check first:
+> `docker exec sparky-dog-bet-web-1 python -c "from app import db; print(db.get_config('BettingLocked'), db.get_config('ResultsRevealed'))"`.
+> To verify **locked/revealed** UI without touching the live game, spin up a throwaway
+> instance, seed + set config via `docker exec`, drive it with the same Dockerized Playwright,
+> then tear it down:
+> ```bash
+> docker run -d --name sparky-verify -p 9997:8000 -e SECRET_KEY=verify sparky-dog-bet-web
+> # curl-loop until :9997 is up; seed via: docker exec -i sparky-verify python - <<'PY' ...
+> #   add_guest / submit_bet (BEFORE revealing — submit is blocked once locked) /
+> #   upsert_actual_result / set_config('ResultsRevealed', True) ... PY
+> docker run --rm --network host -e BASE_URL=http://localhost:9997 -e OUT_DIR=/work/shots \
+>   -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright -e PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+>   -v "$PWD/tests/kiosk-visual":/work -w /work mcr.microsoft.com/playwright:v1.48.0-jammy \
+>   bash -lc 'npm install --no-save playwright@1.48.0 >/tmp/npm.log 2>&1 && node my-check.mjs'
+> docker rm -f sparky-verify
+> ```
+> The isolated `:9998`/`:9997` startup occasionally races (`ERR_CONNECTION_REFUSED`) —
+> health-check with a curl loop first; a re-run usually passes.
 
 Needs Docker.
 
