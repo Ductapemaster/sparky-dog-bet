@@ -21,22 +21,25 @@ const ap = await admin.newPage();
 const ashot = shooter(ap, OUT, 'admin');
 await ap.goto(BASE + '/admin', { waitUntil: 'networkidle' });
 await ap.fill('input[name=password]', ADMIN_PW);
-// NB: the nav renders a "Sign Out" submit button on every page, so target the
-// login form's button specifically rather than the first button[type=submit].
+// Target the login form's Sign In button specifically (other submit buttons may
+// exist on the page) rather than the first button[type=submit].
 await ap.getByRole('button', { name: /Sign In/ }).click();
-await ap.getByText('Game Controls').waitFor({ timeout: 8000 });
+// Login lands on the Overview tab; confirm via the always-present page heading.
+await ap.getByRole('heading', { name: 'Admin Panel' }).waitFor({ timeout: 8000 });
 await ashot('overview');
 
 // Reload the admin page fresh (avoids depending on in-place panel refresh), click
-// the toggle, and confirm the toggle request actually reached the server.
+// the toggle, and confirm the toggle request actually reached the server. The lock/
+// reveal controls live on the Controls tab now, so open it via the #controls hash
+// (the tab switcher shows the matching panel on load).
 async function toggle(now, after) {
-  await ap.goto(BASE + '/admin', { waitUntil: 'networkidle' });
+  await ap.goto(BASE + '/admin#controls', { waitUntil: 'networkidle' });
   const [resp] = await Promise.all([
     ap.waitForResponse((r) => r.url().includes('/admin/toggle'), { timeout: 8000 }),
     ap.getByRole('button', { name: now, exact: true }).click(),
   ]);
   if (resp.status() >= 400) throw new Error(`toggle ${now} → HTTP ${resp.status()}`);
-  await ap.goto(BASE + '/admin', { waitUntil: 'networkidle' });
+  await ap.goto(BASE + '/admin#controls', { waitUntil: 'networkidle' });
   await ap.getByRole('button', { name: after, exact: true }).waitFor({ timeout: 8000 });
 }
 
@@ -112,6 +115,29 @@ await kshot('how-you-did');
 
 // ── 4. HIDE results (admin UI) — confirm reversible ──
 await rep.step('admin: Hide Results toggles back', () => toggle('Hide Results', 'Reveal Results'));
+
+// ── 5. Admin tab bar fits a phone (no horizontal overflow) ──
+//      The admin nav packs 6 tabs on one row; on a narrow phone they must share the
+//      width without spilling past the viewport. Runs in its own phone-sized context.
+await rep.step('admin tab bar fits phone width (no horizontal overflow)', async () => {
+  const phone = await browser.newContext({
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+  });
+  const pp = await phone.newPage();
+  await pp.goto(BASE + '/admin', { waitUntil: 'networkidle' });
+  await pp.fill('input[name=password]', ADMIN_PW);
+  await pp.getByRole('button', { name: /Sign In/ }).click();
+  await pp.waitForSelector('.admin-tab', { timeout: 8000 });
+  const o = await pp.evaluate(() => {
+    const nav = document.querySelector('nav.nav'), de = document.documentElement;
+    return { nav: nav.scrollWidth - nav.clientWidth, doc: de.scrollWidth - de.clientWidth };
+  });
+  await pp.screenshot({ path: `${OUT}/admin_phone-nav.png` });
+  await phone.close();
+  if (o.doc > 1) throw new Error(`admin page overflows horizontally by ${o.doc}px`);
+  if (o.nav > 1) throw new Error(`admin nav overflows by ${o.nav}px`);
+});
 
 await browser.close();
 process.exit(rep.summary() ? 0 : 1);

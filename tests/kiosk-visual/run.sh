@@ -82,8 +82,14 @@ seed = [('Test Alice', '1111', [{'breed': 'Boxer', 'percentage': 60}, {'breed': 
 for n, p, bet in seed:
     db.add_guest(n, p); db.submit_bet(n, p, bet)
 db.add_guest('Test Carol', '3333')
-for breed, pct in [('Boxer', 55), ('Labrador Retriever', 30), ('German Shepherd Dog', 15)]:
-    db.upsert_actual_result(breed, pct)
+# Results are code-seeded now (RESULT_SETS); seed a deterministic 'harness' set for the
+# breeds the test guests bet on and make it active so the reveal step scores against them.
+with db._get_db() as conn:
+    conn.execute("DELETE FROM actual_results WHERE result_set='harness'")
+    conn.executemany(
+        "INSERT INTO actual_results (breed, actual_percentage, result_set) VALUES (?, ?, 'harness')",
+        [('Boxer', 55), ('Labrador Retriever', 30), ('German Shepherd Dog', 15)])
+db.set_config('ActiveResultSet', 'harness')
 PY
 }
 
