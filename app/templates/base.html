@@ -19,7 +19,7 @@
          data-label="About Sparky">About Sparky</a>
       <a href="{{ url_for('main.bet') }}"
          class="nav-link {{ 'active' if request.endpoint in ('main.bet','main.bet_verify','main.bet_submit') }}"
-         data-label="{% if nav_status.locked %}🔒 {% endif %}Place My Bet">{% if nav_status.locked %}🔒 {% endif %}Place My Bet</a>
+         data-label="{% if nav_status.phase == 'pre' %}⏳ {% elif nav_status.locked %}🔒 {% endif %}Place My Bet">{% if nav_status.phase == 'pre' %}⏳ {% elif nav_status.locked %}🔒 {% endif %}Place My Bet</a>
       <a href="{{ url_for('main.leaderboard') }}"
          class="nav-link {{ 'active' if request.endpoint == 'main.leaderboard' }}"
          data-label="Leaderboard">Leaderboard</a>

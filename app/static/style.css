@@ -743,12 +743,12 @@ html.kiosk .detail-table { font-size: 0.82rem; }
 /* ── Responsive tweaks ───────────────────────────────────── */
 @media (max-width: 860px) {
   .nav {
-    padding: 0.75rem;
+    padding: 0.6rem 0.5rem;
     grid-template-areas: "brand home" "links links";
     grid-template-columns: 1fr auto;
   }
   .nav-links   { justify-content: center; flex-wrap: nowrap; gap: 0.1rem; }
-  .nav-link    { flex: 1 1 0; text-align: center; padding: 0.5rem 0.25rem; font-size: 0.82rem; white-space: nowrap; }
+  .nav-link    { flex: 1 1 0; text-align: center; padding: 0.5rem 0.18rem; font-size: 0.82rem; white-space: nowrap; }
 }
 
 @media (max-width: 480px) {

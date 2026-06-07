@@ -8,14 +8,12 @@
 {% block nav_links %}
 {% if not show_login %}
 <a href="#overview" class="nav-link admin-tab" data-tab="overview">Overview</a>
+<a href="#controls" class="nav-link admin-tab" data-tab="controls">Controls</a>
 <a href="#guests"   class="nav-link admin-tab" data-tab="guests">Guests</a>
 <a href="#bets"     class="nav-link admin-tab" data-tab="bets">Bets</a>
 <a href="#results"  class="nav-link admin-tab" data-tab="results">Results</a>
 <a href="#gallery"  class="nav-link admin-tab" data-tab="gallery">Gallery</a>
 {% endif %}
-<form method="post" action="{{ url_for('main.admin_logout') }}" class="nav-sign-out-form">
-  <button type="submit" class="nav-sign-out">Sign Out</button>
-</form>
 {% endblock %}
 
 {% block content %}
@@ -70,95 +68,6 @@
   </div>
 
   <div class="card" style="margin-bottom:1.5rem;">
-    <h3 class="admin-sh">Game Controls</h3>
-    <div class="toggle-row">
-      <div class="toggle-info">
-        <strong>Betting</strong>
-        <span>{% if status.revealed %}Locked automatically while results are shown — hide results to reopen{% else %}Lock to stop new submissions{% endif %}</span>
-      </div>
-      {% if status.revealed %}
-      <button type="button" class="btn btn-secondary" disabled>Locked</button>
-      {% else %}
-      <form method="post" action="{{ url_for('main.admin_toggle', key='BettingLocked') }}">
-        <button type="submit" class="btn {{ 'btn-danger' if status.locked else 'btn-secondary' }}">
-          {{ 'Unlock Betting' if status.locked else 'Lock Betting' }}
-        </button>
-      </form>
-      {% endif %}
-    </div>
-    <div class="toggle-row">
-      <div class="toggle-info">
-        <strong>Results</strong>
-        <span>{% if status.revealed %}Guests can see the leaderboard{% else %}Reveal the leaderboard to guests — this also locks betting{% endif %}</span>
-      </div>
-      <form method="post" action="{{ url_for('main.admin_toggle', key='ResultsRevealed') }}">
-        <button type="submit" class="btn {{ 'btn-danger' if status.revealed else 'btn-secondary' }}">
-          {{ 'Hide Results' if status.revealed else 'Reveal Results' }}
-        </button>
-      </form>
-    </div>
-    <div style="margin-top:0.75rem; padding-top:0.75rem;">
-      <div class="toggle-info" style="margin-bottom:0.5rem;">
-        <strong>Auto-Lock Deadline</strong>
-        <span>
-          {% if status.deadline_display %}
-            Betting auto-closes at <strong>{{ status.deadline_display }}</strong>{% if status.locked and not status.manual_locked %} — <span style="color:#b91c1c;">passed, betting is now closed</span>{% endif %}
-          {% else %}
-            No deadline set — betting stays open until you lock it manually.
-          {% endif %}
-        </span>
-      </div>
-      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-        <form method="post" action="{{ url_for('main.admin_set_deadline') }}"
-              style="display:flex; gap:0.5rem; flex:1; min-width:200px; align-items:center;">
-          <input type="datetime-local" name="deadline"
-                 value="{{ status.deadline_raw.replace(' ', 'T') if status.deadline_raw else '' }}"
-                 style="flex:1;">
-          <button type="submit" class="btn btn-secondary">Save Deadline</button>
-        </form>
-        {% if status.deadline_raw %}
-        <form method="post" action="{{ url_for('main.admin_set_deadline') }}">
-          <input type="hidden" name="deadline" value="">
-          <button type="submit" class="btn btn-secondary">Clear</button>
-        </form>
-        {% endif %}
-      </div>
-      <p class="muted" style="font-size:0.8rem; margin-top:0.5rem;">
-        Times are in Pacific (event timezone). The manual Lock above always overrides the deadline.
-      </p>
-    </div>
-  </div>
-
-  <div class="card" style="margin-bottom:1.5rem;">
-    <h3 class="admin-sh">Leaderboard <span class="muted" style="font-weight:400; font-size:0.85rem;">(private)</span></h3>
-    {% if leaderboard %}
-    <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
-      Lowest score wins. Visible only to you here — guests don't see standings until you hit
-      <strong>Reveal Results</strong>.
-    </p>
-    <table class="status-table">
-      <thead>
-        <tr><th>#</th><th>Name</th><th style="text-align:right;">Points Off</th></tr>
-      </thead>
-      <tbody>
-        {% for entry in leaderboard %}
-        <tr>
-          <td data-label="#" style="white-space:nowrap;">{{ loop.index }}{% if loop.first %} 🏆{% elif loop.last and leaderboard|length > 1 %} 💩{% endif %}</td>
-          <td data-label="Name">{{ entry.name }}</td>
-          <td data-label="Points Off" style="text-align:right;">{{ entry.score }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    <p class="muted" style="margin-top:0.75rem; font-size:0.85rem;">Ties broken by submission time.</p>
-    {% else %}
-    <p class="muted" style="font-size:0.9rem;">
-      Enter Sparky's actual breed results in the <strong>Results</strong> tab to compute standings.
-    </p>
-    {% endif %}
-  </div>
-
-  <div class="card" style="margin-bottom:1.5rem;">
     <div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem; flex-wrap:wrap;">
       <h3 class="admin-sh" style="margin-bottom:0;">Guest Submission Status</h3>
       <span class="muted" style="font-size:0.85rem;">
@@ -191,7 +100,133 @@
     </table>
   </div>
 
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 class="admin-sh">Leaderboard <span class="muted" style="font-weight:400; font-size:0.85rem;">(private)</span></h3>
+    {% if leaderboard %}
+    <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
+      Lowest score wins. Visible only to you here — guests don't see standings until you hit
+      <strong>Reveal Results</strong>.
+    </p>
+    <table class="status-table">
+      <thead>
+        <tr><th>#</th><th>Name</th><th style="text-align:right;">Points Off</th></tr>
+      </thead>
+      <tbody>
+        {% for entry in leaderboard %}
+        <tr>
+          <td data-label="#" style="white-space:nowrap;">{{ loop.index }}{% if loop.first %} 🏆{% elif loop.last and leaderboard|length > 1 %} 💩{% endif %}</td>
+          <td data-label="Name">{{ entry.name }}</td>
+          <td data-label="Points Off" style="text-align:right;">{{ entry.score }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top:0.75rem; font-size:0.85rem;">Ties broken by submission time.</p>
+    {% else %}
+    <p class="muted" style="font-size:0.9rem;">
+      Enter Sparky's actual breed results in the <strong>Results</strong> tab to compute standings.
+    </p>
+    {% endif %}
+  </div>
+
 </div>{# /tab-overview #}
+
+{# ═══════════════════════════════════════════════ #}
+{# TAB: Controls                                   #}
+{# ═══════════════════════════════════════════════ #}
+<div id="tab-controls" class="admin-tab-panel">
+
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 class="admin-sh">Game Controls</h3>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <strong>Betting</strong>
+        <span>{% if status.revealed %}Locked automatically while results are shown — hide results to reopen{% else %}Lock to stop new submissions{% endif %}</span>
+      </div>
+      {% if status.revealed %}
+      <button type="button" class="btn btn-secondary" disabled>Locked</button>
+      {% else %}
+      <form method="post" action="{{ url_for('main.admin_toggle', key='BettingLocked') }}">
+        <button type="submit" class="btn {{ 'btn-danger' if status.locked else 'btn-secondary' }}">
+          {{ 'Unlock Betting' if status.locked else 'Lock Betting' }}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <strong>Results</strong>
+        <span>{% if status.revealed %}Guests can see the leaderboard{% else %}Reveal the leaderboard to guests — this also locks betting{% endif %}</span>
+      </div>
+      <form method="post" action="{{ url_for('main.admin_toggle', key='ResultsRevealed') }}">
+        <button type="submit" class="btn {{ 'btn-danger' if status.revealed else 'btn-secondary' }}">
+          {{ 'Hide Results' if status.revealed else 'Reveal Results' }}
+        </button>
+      </form>
+    </div>
+    <div style="margin-top:0.75rem; padding-top:0.25rem;">
+      <div class="toggle-info" style="margin-bottom:0.5rem;">
+        <strong>Betting Opens</strong>
+        <span>
+          {% if status.start_display %}
+            Betting auto-opens at <strong>{{ status.start_display }}</strong>{% if status.phase == 'pre' %} — <span style="color:#92400e;">not open yet</span>{% endif %}
+          {% else %}
+            No open time set — betting is open now (until locked or the deadline passes).
+          {% endif %}
+        </span>
+      </div>
+      <div class="time-setter">
+        <form method="post" action="{{ url_for('main.admin_set_start') }}" id="form-set-start">
+          <input type="datetime-local" name="start"
+                 value="{{ status.start_raw.replace(' ', 'T') if status.start_raw else '' }}">
+        </form>
+        <div class="time-setter-actions">
+          <button type="submit" form="form-set-start" class="btn btn-primary">Save open time</button>
+          {% if status.start_raw %}
+          <form method="post" action="{{ url_for('main.admin_set_start') }}">
+            <input type="hidden" name="start" value="">
+            <button type="submit" class="btn btn-secondary">Clear</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      <p class="muted" style="font-size:0.8rem; margin-top:0.5rem;">
+        Times are in Pacific (event timezone). Leave blank to keep betting open immediately.
+      </p>
+    </div>
+    <div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border);">
+      <div class="toggle-info" style="margin-bottom:0.5rem;">
+        <strong>Auto-Lock Deadline</strong>
+        <span>
+          {% if status.deadline_display %}
+            Betting auto-closes at <strong>{{ status.deadline_display }}</strong>{% if status.deadline_passed %} — <span style="color:#b91c1c;">passed, betting is now closed</span>{% elif status.revealed %} — <span style="color:#92400e;">not reached yet; betting is currently closed because results are revealed</span>{% elif status.manual_locked %} — <span style="color:#92400e;">not reached yet; betting is currently locked manually</span>{% endif %}
+          {% else %}
+            No deadline set — betting stays open until you lock it manually.
+          {% endif %}
+        </span>
+      </div>
+      <div class="time-setter">
+        <form method="post" action="{{ url_for('main.admin_set_deadline') }}" id="form-set-deadline">
+          <input type="datetime-local" name="deadline"
+                 value="{{ status.deadline_raw.replace(' ', 'T') if status.deadline_raw else '' }}">
+        </form>
+        <div class="time-setter-actions">
+          <button type="submit" form="form-set-deadline" class="btn btn-primary">Save deadline</button>
+          {% if status.deadline_raw %}
+          <form method="post" action="{{ url_for('main.admin_set_deadline') }}">
+            <input type="hidden" name="deadline" value="">
+            <button type="submit" class="btn btn-secondary">Clear</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      <p class="muted" style="font-size:0.8rem; margin-top:0.5rem;">
+        Times are in Pacific (event timezone). The manual Lock above always overrides the deadline.
+      </p>
+    </div>
+  </div>
+
+</div>{# /tab-controls #}
 
 {# ═══════════════════════════════════════════════ #}
 {# TAB: Guests                                     #}
@@ -409,70 +444,66 @@
 
   <div class="card" style="margin-bottom:1.5rem;">
     <h3 class="admin-sh">Actual DNA Results</h3>
-    <p class="muted" style="font-size:0.85rem; margin-bottom:0.75rem;">
-      Enter Sparky's real breed breakdown. Scores are computed against these values.
-    </p>
-    {% if actual_results %}
-    <table style="margin-bottom:1rem;">
-      <thead>
-        <tr><th>Breed</th><th style="text-align:right;">%</th><th style="text-align:right;"></th></tr>
-      </thead>
-      <tbody>
-        {% for r in actual_results %}
-        <tr>
-          <td>{{ r.breed }}</td>
-          <td style="text-align:right; font-weight:600;">{{ r.actual_percentage | int }}%</td>
-          <td style="white-space:nowrap; text-align:right;">
-            <button type="button" class="btn btn-secondary btn-sm btn-icon"
-                    title="Edit" onclick="toggleRow('ea{{ r.id }}')">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </button>
-            <form method="post" action="{{ url_for('main.admin_actual_delete', result_id=r.id) }}"
-                  style="display:inline;" onsubmit="return confirm('Delete this result?')">
-              <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-              </button>
-            </form>
-          </td>
-        </tr>
-        <tr id="ea{{ r.id }}" style="display:none; background:var(--primary-pale);">
-          <td colspan="3">
-            <form method="post" action="{{ url_for('main.admin_actual_edit', result_id=r.id) }}"
-                  class="inline-form">
-              <select name="breed" required style="flex:1; min-width:160px;">
-                {% for breed in breeds %}
-                <option value="{{ breed }}" {{ 'selected' if breed == r.breed }}>{{ breed }}</option>
-                {% endfor %}
-              </select>
-              <input type="number" name="pct" value="{{ r.actual_percentage | int }}"
-                     placeholder="%" step="1" min="0" max="100" required style="width:5rem;">
-              <button type="submit" class="btn btn-primary btn-sm">Save</button>
-              <button type="button" class="btn btn-secondary btn-sm"
-                      onclick="toggleRow('ea{{ r.id }}')">Cancel</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+
+    {% if active_result_set == 'fake' %}
+    <div class="alert" style="background:#fef9c3; border:1px solid #ca8a04; color:#854d0e; margin-bottom:1rem;">
+      🧪 <strong>TEST MODE</strong> — the <strong>fake</strong> results set is active. Scoring and the
+      leaderboard use placeholder data, so you can safely demo the reveal. Flip to <strong>Real</strong>
+      at reveal time.
+    </div>
+    {% else %}
+    <div class="alert" style="background:#dcfce7; border:1px solid #16a34a; color:#166534; margin-bottom:1rem;">
+      ✅ <strong>LIVE</strong> — the <strong>real</strong> results set is active. Scoring reflects
+      Sparky's actual DNA.
+    </div>
     {% endif %}
-    <details>
-      <summary class="btn btn-secondary btn-sm" style="display:inline-block; cursor:pointer;">
-        + Add Result
-      </summary>
-      <form method="post" action="{{ url_for('main.admin_actual_add') }}" class="inline-form"
-            style="margin-top:0.75rem;">
-        <select name="breed" required style="flex:1; min-width:160px;">
-          <option value="">— Select breed —</option>
-          {% for breed in breeds %}
-          <option value="{{ breed }}">{{ breed }}</option>
+
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <strong>Active results set</strong>
+        <span>Which set scoring and the leaderboard use. Switching recomputes standings.</span>
+      </div>
+      <div style="display:flex; gap:0.5rem;">
+        <form method="post" action="{{ url_for('main.admin_set_result_set') }}">
+          <input type="hidden" name="set" value="fake">
+          <button type="submit" class="btn {{ 'btn-warning' if active_result_set == 'fake' else 'btn-secondary' }}"
+                  {{ 'disabled' if active_result_set == 'fake' }}>🧪 Fake (test)</button>
+        </form>
+        <form method="post" action="{{ url_for('main.admin_set_result_set') }}">
+          <input type="hidden" name="set" value="real">
+          <button type="submit" class="btn {{ 'btn-primary' if active_result_set == 'real' else 'btn-secondary' }}"
+                  {{ 'disabled' if active_result_set == 'real' }}>✅ Real (live)</button>
+        </form>
+      </div>
+    </div>
+
+    <p class="muted" style="font-size:0.85rem; margin:0.75rem 0;">
+      Results are fixed (loaded from the app config) and can't be edited here. Both sets are shown
+      below for reference.
+    </p>
+
+    {% for set_name in ['fake', 'real'] %}
+    <div style="margin-top:1rem;">
+      <div class="toggle-info" style="margin-bottom:0.4rem;">
+        <strong>{{ '🧪 Fake (test)' if set_name == 'fake' else '✅ Real (live)' }}{% if active_result_set == set_name %} — active{% endif %}</strong>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Breed</th><th style="text-align:right;">%</th></tr>
+        </thead>
+        <tbody>
+          {% for r in result_sets.get(set_name, []) %}
+          <tr>
+            <td>{{ r.breed }}</td>
+            <td style="text-align:right; font-weight:600;">{{ r.actual_percentage | int }}%</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="2" class="muted">No results in this set.</td></tr>
           {% endfor %}
-        </select>
-        <input type="number" name="pct" placeholder="%" step="1" min="0" max="100"
-               required style="width:5rem;">
-        <button type="submit" class="btn btn-primary btn-sm">Add</button>
-      </form>
-    </details>
+        </tbody>
+      </table>
+    </div>
+    {% endfor %}
   </div>
 
   <div class="card" style="margin-bottom:1.5rem;">
@@ -718,7 +749,7 @@
 
   // ── Background form submission ────────────────────────────
   (function () {
-    var panelIds = ['tab-overview', 'tab-guests', 'tab-bets', 'tab-results', 'tab-gallery'];
+    var panelIds = ['tab-overview', 'tab-controls', 'tab-guests', 'tab-bets', 'tab-results', 'tab-gallery'];
 
     function refreshPanels(html) {
       var doc = new DOMParser().parseFromString(html, 'text/html');
@@ -803,6 +834,20 @@
   .inline-form input[type=text],
   .inline-form input[type=number] { flex: 1; min-width: 120px; }
   .danger-zone { border: 2px solid #c0392b; }
+
+  /* Time setters (open / deadline) — stacked & touch-friendly for a vertical phone:
+     full-width datetime input on top, action buttons in a row beneath. The Save button
+     lives outside the input's <form> and is wired back to it via the form= attribute, so
+     layout is independent of form boundaries. */
+  .time-setter { display: flex; flex-direction: column; gap: 0.5rem; }
+  .time-setter input[type=datetime-local] { width: 100%; box-sizing: border-box; }
+  .time-setter-actions { display: flex; gap: 0.5rem; }
+  /* Each direct child (the Save button, and the Clear <form>) shares the row evenly. */
+  .time-setter-actions > .btn,
+  .time-setter-actions > form { flex: 1; }
+  .time-setter-actions > form { display: flex; }
+  .time-setter-actions > form .btn { flex: 1; }
+  .time-setter-actions .btn { padding: 0.55rem 0.75rem; }
 
   .guest-chev { display: none; }
 

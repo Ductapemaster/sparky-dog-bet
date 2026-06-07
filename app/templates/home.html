@@ -19,10 +19,10 @@
   </a>
   <div class="path-divider">or</div>
   <a href="{{ url_for('main.bet') }}" class="path-card path-card--primary{% if nav_status.locked %} path-card--locked{% endif %}">
-    <div class="path-card-icon">{% if nav_status.locked %}🔒{% else %}🎯{% endif %}</div>
+    <div class="path-card-icon">{% if nav_status.phase == 'pre' %}⏳{% elif nav_status.phase == 'closed' %}🔒{% else %}🎯{% endif %}</div>
     <div class="path-card-body">
-      <div class="path-card-title">{% if nav_status.locked %}Betting Closed{% else %}Place My Bet{% endif %}</div>
-      <div class="path-card-desc">{% if nav_status.locked %}Betting is closed{% if nav_status.deadline_display %} (as of {{ nav_status.deadline_display }}){% endif %}. Check back for the reveal at the Reception Dinner!{% else %}Ready to guess? Pick your breeds, assign percentages, and submit your $1 entry{% if nav_status.deadline_display %} — betting closes {{ nav_status.deadline_display }}{% endif %}.{% endif %}</div>
+      <div class="path-card-title">{% if nav_status.phase == 'pre' %}Betting Opens Soon{% elif nav_status.phase == 'closed' %}Betting Closed{% else %}Place My Bet{% endif %}</div>
+      <div class="path-card-desc">{% if nav_status.phase == 'pre' %}Betting opens{% if nav_status.start_display %} {{ nav_status.start_display }}{% endif %} — come back then to place your $1 guess!{% elif nav_status.phase == 'closed' %}Betting is closed{% if nav_status.deadline_display %} (as of {{ nav_status.deadline_display }}){% endif %}. Check back for the reveal at the Reception Dinner!{% else %}Ready to guess? Pick your breeds, assign percentages, and submit your $1 entry{% if nav_status.deadline_display %} — betting closes {{ nav_status.deadline_display }}{% endif %}.{% endif %}</div>
     </div>
   </a>
 </div>

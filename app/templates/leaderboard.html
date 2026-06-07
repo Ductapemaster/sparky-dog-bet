@@ -10,7 +10,7 @@
 <div class="card" style="text-align:center;">
   <div style="font-size:2rem; margin-bottom:0.75rem;">🎲</div>
   <h3 class="card-title" style="text-align:center;">Results Not Yet Revealed</h3>
-  <p class="muted">{% if status.deadline_display %}Betting closes <strong>{{ status.deadline_display }}</strong>, and the leaderboard will be revealed at the Reception Dinner. Check back then to see where you landed!{% else %}The leaderboard will be revealed at the Reception Dinner. Check back then to see where you landed!{% endif %}</p>
+  <p class="muted">{% if status.phase == 'pre' and status.start_display %}Betting opens <strong>{{ status.start_display }}</strong>, and the leaderboard will be revealed at the Reception Dinner. Check back then to see where you landed!{% elif status.deadline_display %}Betting closes <strong>{{ status.deadline_display }}</strong>, and the leaderboard will be revealed at the Reception Dinner. Check back then to see where you landed!{% else %}The leaderboard will be revealed at the Reception Dinner. Check back then to see where you landed!{% endif %}</p>
 </div>
 </div>
 

@@ -61,12 +61,16 @@ def _public_page_cache(response):
 def _status():
     if 'status' not in g:
         g.status = {
+            'phase':            db.betting_phase(),
             'locked':           db.betting_is_locked(),
             'manual_locked':    db.is_true(db.get_config('BettingLocked')),
             'require_pin':      db.is_true(db.get_config('RequirePin')),
             'revealed':         db.is_true(db.get_config('ResultsRevealed')),
+            'start_display':    db.start_display(),
+            'start_raw':        (db.get_config('BettingStartTime') or '').strip(),
             'deadline_display': db.deadline_display(),
             'deadline_raw':     (db.get_config('BettingDeadline') or '').strip(),
+            'deadline_passed':  (db.get_deadline() is not None and datetime.now() >= db.get_deadline()),
         }
     return g.status
 
@@ -278,7 +282,9 @@ def kiosk():
     session.permanent = True
     session['kiosk'] = True
     session.pop('guest', None)
-    return redirect(url_for('main.bet'))
+    # Land on the About attract screen (matches the idle-reset and post-bet hand-off),
+    # not the bet form — guests navigate to betting from there.
+    return redirect(url_for('main.about'))
 
 
 @bp.route('/bet/logout', methods=['GET', 'POST'])
@@ -346,7 +352,8 @@ def admin():
         actual=actual,
         grouped_bets=grouped_bets,
         all_bets=all_bets_raw,
-        actual_results=db.get_all_actual_results(),
+        result_sets=db.get_results_by_set(),
+        active_result_set=db.get_active_result_set(),
         gallery=db.get_all_gallery(),
         breeds=db.get_breeds(),
         all_breeds=db.get_all_breeds())
@@ -371,6 +378,26 @@ def admin_toggle(key):
     db.set_config(key, not db.is_true(current))
     if key == 'ResultsRevealed':
         db.recompute_scores()
+    return redirect(url_for('main.admin'))
+
+
+@bp.route('/admin/set-start', methods=['POST'])
+def admin_set_start():
+    if not session.get('admin_auth'):
+        return redirect(url_for('main.admin'))
+    raw = request.form.get('start', '').strip()
+    if not raw:
+        db.set_config('BettingStartTime', '')
+    else:
+        # <input type="datetime-local"> gives 'YYYY-MM-DDTHH:MM' — store as 'YYYY-MM-DD HH:MM'.
+        try:
+            dt = datetime.strptime(raw, '%Y-%m-%dT%H:%M')
+            db.set_config('BettingStartTime', dt.strftime(db.DEADLINE_FMT))
+            deadline = db.get_deadline()
+            if deadline is not None and dt >= deadline:
+                flash('Heads up: the open time is at or after the close time — betting would never open.')
+        except ValueError:
+            flash('Could not parse that date/time.')
     return redirect(url_for('main.admin'))
 
 
@@ -505,42 +532,15 @@ def admin_breeds_delete(breed_id):
     return redirect(url_for('main.admin'))
 
 
-# ── Admin: Actual Results CRUD ────────────────────────────────
+# ── Admin: Active Results Set (fake = test mode / real = live) ─
 
-@bp.route('/admin/actual/add', methods=['POST'])
-def admin_actual_add():
+@bp.route('/admin/result-set', methods=['POST'])
+def admin_set_result_set():
     if denied := _require_admin(): return denied
-    breed = request.form.get('breed', '').strip()
-    pct   = request.form.get('pct', '').strip()
-    if breed and pct:
-        try:
-            db.upsert_actual_result(breed, int(float(pct)))
-        except ValueError:
-            pass
-    db.recompute_scores()
-    return redirect(url_for('main.admin'))
-
-
-@bp.route('/admin/actual/<int:result_id>/edit', methods=['POST'])
-def admin_actual_edit(result_id):
-    if denied := _require_admin(): return denied
-    breed = request.form.get('breed', '').strip()
-    pct   = request.form.get('pct', '').strip()
-    if breed and pct:
-        try:
-            db.delete_actual_result(result_id)
-            db.upsert_actual_result(breed, int(float(pct)))
-        except ValueError:
-            pass
-    db.recompute_scores()
-    return redirect(url_for('main.admin'))
-
-
-@bp.route('/admin/actual/<int:result_id>/delete', methods=['POST'])
-def admin_actual_delete(result_id):
-    if denied := _require_admin(): return denied
-    db.delete_actual_result(result_id)
-    db.recompute_scores()
+    choice = request.form.get('set', '').strip()
+    if choice in ('fake', 'real'):
+        db.set_config('ActiveResultSet', choice)
+        db.recompute_scores()  # standings re-derive against the newly active set
     return redirect(url_for('main.admin'))
 
 

@@ -6,12 +6,48 @@ Uses Python's built-in sqlite3 — no additional dependencies required.
 """
 
 import os
+import json
 import sqlite3
 import threading
 from contextlib import contextmanager
 from datetime import datetime
 
 _submit_lock = threading.Lock()
+
+# Sparky's actual-results sets, reseeded into the DB on every init_db. 'fake' is placeholder
+# data for testing the reveal/leaderboard flow without spoiling. 'real' is Sparky's
+# CONFIDENTIAL DNA breakdown — it must never be committed (the repo is public), so it is
+# loaded at runtime from a gitignored file (data/real_results.json, same {breed: pct} shape)
+# via _result_sets(). Without that file the 'real' set stays empty: a fresh checkout runs the
+# full app in test mode but can't reveal Sparky's real results. The admin only toggles which
+# set is active (config ActiveResultSet) — values are not edited in-app. See SPARKY_DNA_RESULTS.md
+# (also gitignored) for the real numbers and the reveal-day procedure. All breed names must
+# exist in breeds.txt.
+RESULT_SETS = {
+    'fake': {
+        'Dalmatian': 50,
+        'Chihuahua': 23,
+        'Siberian Husky': 15,
+        'Poodle (Standard)': 12,
+    },
+    'real': {},
+}
+
+
+def _result_sets():
+    """RESULT_SETS with the confidential 'real' set merged in from the gitignored
+    data/real_results.json if it exists. Kept out of source so it never reaches the
+    public repo; the live deploy supplies the file alongside the DB."""
+    sets = {name: dict(pcts) for name, pcts in RESULT_SETS.items()}
+    real_path = os.path.join(os.path.dirname(_db_path()) or '.', 'real_results.json')
+    try:
+        with open(real_path) as f:
+            real = json.load(f)
+        if isinstance(real, dict) and real:
+            sets['real'] = {str(b): float(p) for b, p in real.items()}
+    except (OSError, ValueError):
+        pass
+    return sets
 
 
 def _db_path():
@@ -82,8 +118,10 @@ def init_db():
 
             CREATE TABLE IF NOT EXISTS actual_results (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                breed TEXT NOT NULL UNIQUE,
-                actual_percentage REAL NOT NULL
+                breed TEXT NOT NULL,
+                actual_percentage REAL NOT NULL,
+                result_set TEXT NOT NULL DEFAULT 'real',
+                UNIQUE(breed, result_set)
             );
 
             CREATE TABLE IF NOT EXISTS breeds (
@@ -113,18 +151,50 @@ def init_db():
         if 'rank' not in guest_cols:
             conn.execute("ALTER TABLE guests ADD COLUMN rank INTEGER")
 
+        # Migration: older DBs have actual_results keyed UNIQUE(breed) with no result_set
+        # column. Results are now code-defined (see RESULT_SETS below) and reseeded on every
+        # boot, so any existing rows are reproducible — drop and recreate with the new schema.
+        actual_cols = {r['name'] for r in conn.execute("PRAGMA table_info(actual_results)").fetchall()}
+        if 'result_set' not in actual_cols:
+            conn.executescript("""
+                DROP TABLE IF EXISTS actual_results;
+                CREATE TABLE actual_results (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    breed TEXT NOT NULL,
+                    actual_percentage REAL NOT NULL,
+                    result_set TEXT NOT NULL DEFAULT 'real',
+                    UNIQUE(breed, result_set)
+                );
+            """)
+
         # Seed default config — INSERT OR IGNORE leaves existing values untouched
         defaults = [
             ('BettingLocked',   'FALSE'),
             ('RequirePin',      'TRUE'),
             ('ResultsRevealed', 'FALSE'),
             ('AdminPassword',   'sparky'),
+            ('BettingStartTime', ''),
             ('BettingDeadline', ''),
             ('VenmoUsername',   'Dan-Kouba'),
+            ('ActiveResultSet', 'fake'),
         ]
         conn.executemany(
             "INSERT OR IGNORE INTO config (key, value) VALUES (?, ?)", defaults
         )
+
+        # Reseed the actual-results sets so the DB always matches the code-defined sets
+        # ('real' merged in from the gitignored file, see _result_sets). Results are no longer
+        # edited in-app (the admin only toggles which set is active). An empty set is skipped
+        # rather than reseeded, so a deploy missing data/real_results.json never wipes real
+        # results already in the DB — to change a value, edit the source/file and redeploy.
+        for set_name, breeds_pct in _result_sets().items():
+            if not breeds_pct:
+                continue
+            conn.execute("DELETE FROM actual_results WHERE result_set = ?", (set_name,))
+            conn.executemany(
+                "INSERT INTO actual_results (breed, actual_percentage, result_set) VALUES (?, ?, ?)",
+                [(breed, float(pct), set_name) for breed, pct in breeds_pct.items()]
+            )
 
         # Seed breeds from breeds.txt if the table is empty
         count = conn.execute("SELECT COUNT(*) FROM breeds").fetchone()[0]
@@ -183,6 +253,17 @@ def get_deadline():
         return None
 
 
+def get_start_time():
+    """Parse the BettingStartTime config into a naive local datetime, or None."""
+    raw = (get_config('BettingStartTime') or '').strip()
+    if not raw:
+        return None
+    try:
+        return datetime.strptime(raw, DEADLINE_FMT)
+    except ValueError:
+        return None
+
+
 def deadline_display():
     """Human-friendly deadline string (e.g. 'Sat, Jun 13 at 5:00 PM'), or None."""
     dt = get_deadline()
@@ -192,18 +273,38 @@ def deadline_display():
     return dt.strftime('%a, %b %-d at %-I:%M %p')
 
 
-def betting_is_locked():
-    """Single source of truth for whether betting is closed.
+def start_display():
+    """Human-friendly betting-open string (e.g. 'Sat, Jun 13 at 5:00 PM'), or None."""
+    dt = get_start_time()
+    if not dt:
+        return None
+    return dt.strftime('%a, %b %-d at %-I:%M %p')
 
-    Locked if results are revealed (we always lock before revealing, so a reveal
-    forces the lock), manually locked, or past the auto-lock deadline.
+
+def betting_phase():
+    """Single source of truth for the betting timeline: 'pre', 'open', or 'closed'.
+
+    Closed if results are revealed (we always lock before revealing, so a reveal forces
+    closed), manually locked, or past the auto-lock deadline. Pre if a start time is set
+    and we haven't reached it yet. Otherwise open.
     """
     if is_true(get_config('ResultsRevealed')):
-        return True
+        return 'closed'
     if is_true(get_config('BettingLocked')):
-        return True
+        return 'closed'
     deadline = get_deadline()
-    return deadline is not None and datetime.now() >= deadline
+    if deadline is not None and datetime.now() >= deadline:
+        return 'closed'
+    start = get_start_time()
+    if start is not None and datetime.now() < start:
+        return 'pre'
+    return 'open'
+
+
+def betting_is_locked():
+    """Whether betting submissions are blocked — true unless we're in the open phase
+    (covers both 'pre' = not opened yet and 'closed'). Drives the nav lock icon too."""
+    return betting_phase() != 'open'
 
 
 # ── Guests ────────────────────────────────────────────────────
@@ -264,7 +365,12 @@ def submit_bet(name, phone4, breeds, replace=False):
     if verification['has_submitted'] and not replace:
         return {'success': False, 'error': 'You have already placed your bet.'}
 
-    if betting_is_locked():
+    phase = betting_phase()
+    if phase != 'open':
+        if phase == 'pre':
+            opens = start_display()
+            msg = f"Betting hasn't opened yet — opens {opens}." if opens else "Betting hasn't opened yet."
+            return {'success': False, 'error': msg}
         return {'success': False, 'error': 'Betting is currently locked. Check with the organizers.'}
 
     if not breeds:
@@ -375,9 +481,20 @@ def get_gallery_images():
 
 # ── Scoring ───────────────────────────────────────────────────
 
+def get_active_result_set():
+    """Which results set is live for scoring/display: 'fake' (test mode) or 'real'."""
+    return (get_config('ActiveResultSet') or 'fake').strip()
+
+
 def get_actual_results():
+    """The active set's breed→percentage map. Drives scoring, the leaderboard, and the
+    bet 'How You Did' view — all read whichever set the admin has toggled active."""
+    active = get_active_result_set()
     with _get_db() as conn:
-        rows = conn.execute("SELECT breed, actual_percentage FROM actual_results").fetchall()
+        rows = conn.execute(
+            "SELECT breed, actual_percentage FROM actual_results WHERE result_set = ?",
+            (active,)
+        ).fetchall()
         return {r['breed']: float(r['actual_percentage']) for r in rows}
 
 
@@ -543,31 +660,22 @@ def wipe_all_bets():
         conn.execute("UPDATE guests SET has_submitted = 0, submitted_at = NULL")
 
 
-# ── Admin: Actual Results ─────────────────────────────────────
+# ── Admin: Actual Results (read-only — values are code-seeded, see RESULT_SETS) ──
 
-def get_all_actual_results():
+def get_results_by_set():
+    """All result sets grouped for the admin read-only display:
+    {set_name: [{'breed', 'actual_percentage'}, ...]} sorted by percentage desc."""
     with _get_db() as conn:
         rows = conn.execute(
-            "SELECT id, breed, actual_percentage FROM actual_results ORDER BY actual_percentage DESC"
+            "SELECT breed, actual_percentage, result_set FROM actual_results "
+            "ORDER BY result_set, actual_percentage DESC"
         ).fetchall()
-        return [
-            {'id': r['id'], 'breed': r['breed'], 'actual_percentage': r['actual_percentage']}
-            for r in rows
-        ]
-
-
-def upsert_actual_result(breed, pct):
-    with _get_db() as conn:
-        conn.execute(
-            "INSERT INTO actual_results (breed, actual_percentage) VALUES (?, ?) "
-            "ON CONFLICT(breed) DO UPDATE SET actual_percentage = excluded.actual_percentage",
-            (str(breed).strip(), float(pct))
+    grouped = {}
+    for r in rows:
+        grouped.setdefault(r['result_set'], []).append(
+            {'breed': r['breed'], 'actual_percentage': r['actual_percentage']}
         )
-
-
-def delete_actual_result(result_id):
-    with _get_db() as conn:
-        conn.execute("DELETE FROM actual_results WHERE id = ?", (result_id,))
+    return grouped
 
 
 # ── Admin: Gallery ────────────────────────────────────────────

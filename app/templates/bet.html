@@ -204,6 +204,17 @@
 
   {# ── Betting locked ── #}
   {% elif locked %}
+  {% if status.phase == 'pre' %}
+  <div class="card" style="text-align:center; margin-bottom:1.25rem;">
+    <div style="font-size:2rem; margin-bottom:0.75rem;">⏳</div>
+    <h3 class="card-title" style="text-align:center;">Betting Hasn't Opened Yet</h3>
+    {% if status.start_display %}
+    <p class="muted">Betting opens {{ status.start_display }}. Check back then to place your bet!</p>
+    {% else %}
+    <p class="muted">Betting isn't open yet — check back soon to place your bet!</p>
+    {% endif %}
+  </div>
+  {% else %}
   <div class="card" style="text-align:center; margin-bottom:1.25rem;">
     <div style="font-size:2rem; margin-bottom:0.75rem;">🔒</div>
     <h3 class="card-title" style="text-align:center;">Betting is Closed</h3>
@@ -213,6 +224,7 @@
     <p class="muted">We'll reveal Sparky's results at the reception — check back then!</p>
     {% endif %}
   </div>
+  {% endif %}
 
   {% if bet %}
   <div class="card" style="margin-bottom:1.25rem;">
@@ -360,7 +372,12 @@
   {# ── Identity lookup (login) ── #}
   {% else %}
   <div class="card" style="margin-bottom:1.25rem;">
-    {% if status.locked %}
+    {% if status.phase == 'pre' %}
+    <h3 class="card-title">Betting Opens Soon</h3>
+    <p style="margin-bottom:1.25rem;">
+      {% if status.start_display %}Betting opens {{ status.start_display }} — check back then to place your bet.{% else %}Betting isn't open yet — check back soon to place your bet.{% endif %}
+    </p>
+    {% elif status.locked %}
     <h3 class="card-title">Betting is Closed</h3>
     <p style="margin-bottom:1.25rem;">
       Betting's closed for new bets — find your name to see the bet you submitted.
