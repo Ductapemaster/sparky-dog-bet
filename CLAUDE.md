@@ -34,7 +34,10 @@ scored against his real DNA test results. Hosted on Dan's home server via Docker
 | POST | `/bet/submit` | Submit bet |
 | GET | `/admin` | Admin dashboard (session-gated) |
 | POST | `/admin/login` | Admin login |
-| POST | `/admin/toggle/<key>` | Toggle `BettingLocked` or `ResultsRevealed` |
+| POST | `/admin/toggle/<key>` | Toggle a boolean config (`BettingLocked`, `ResultsRevealed`, `RequirePin`) |
+| POST | `/admin/set-start` | Set/clear `BettingStartTime` (auto-open) |
+| POST | `/admin/set-deadline` | Set/clear `BettingDeadline` (auto-close) |
+| POST | `/admin/result-set` | Choose the active results set (`fake` / `real`) |
 | POST | `/admin/logout` | Admin logout |
 | POST | `/admin/guests/add` | Add a guest |
 | POST | `/admin/guests/<id>/edit` | Edit guest name/phone4 |
@@ -47,9 +50,6 @@ scored against his real DNA test results. Hosted on Dan's home server via Docker
 | POST | `/admin/breeds/add` | Add a breed to the dropdown list |
 | POST | `/admin/breeds/<id>/edit` | Edit a breed name |
 | POST | `/admin/breeds/<id>/delete` | Delete a breed |
-| POST | `/admin/actual/add` | Add/upsert an actual DNA result |
-| POST | `/admin/actual/<id>/edit` | Edit an actual DNA result |
-| POST | `/admin/actual/<id>/delete` | Delete an actual DNA result |
 | POST | `/admin/gallery/upload` | Upload a gallery photo (stored in `data/gallery/`) |
 | POST | `/admin/gallery/reorder` | Reorder gallery images (accepts JSON `{order: [ids]}`) |
 | POST | `/admin/gallery/<id>/delete` | Delete gallery photo (removes file from disk too) |
@@ -62,12 +62,23 @@ SQLite file at `DB_PATH` (default `data/sparky.db`). Tables:
 |-------|---------|
 | `guests` | id, name, phone4, has_submitted, submitted_at |
 | `bets` | id, guest_name, breed, percentage, submitted_at |
-| `actual_results` | id, breed, actual_percentage |
+| `actual_results` | id, breed, actual_percentage, result_set (UNIQUE breed+result_set) |
 | `breeds` | id, breed_name |
 | `config` | key, value |
 | `gallery` | id, file_id (stores filename), sort_order |
 
-Config keys: `AdminPassword`, `BettingLocked`, `RequirePin`, `ResultsRevealed`
+Config keys: `AdminPassword`, `BettingLocked`, `RequirePin`, `ResultsRevealed`,
+`BettingStartTime`, `BettingDeadline`, `ActiveResultSet`, `VenmoUsername`
+
+### Results sets (code/file-seeded, not edited in-app)
+
+`actual_results` is reseeded on every `init_db()` from `RESULT_SETS` in `db.py`: a `fake`
+set (placeholder test data, in source) and a `real` set (Sparky's confidential DNA). The
+**real values are never committed** — `_result_sets()` loads them at runtime from the
+gitignored `data/real_results.json` (`{breed: pct}`); without that file the `real` set is
+empty (the app still runs in test mode). Admins don't edit results; they only toggle which
+set is active via `ActiveResultSet` (default `fake`). See `SPARKY_DNA_RESULTS.md` (gitignored)
+for the real numbers and the reveal-day procedure.
 
 Database is created and seeded automatically on startup via `db.init_db()`:
 - Breeds seeded from `breeds.txt` (AKC list, ~224 breeds) on first run only
@@ -107,7 +118,8 @@ Five-tab layout at `/admin`: **Overview**, **Guests**, **Bets**, **Results**, **
 - **Guests** — CRUD for guest names and phone4 PINs
 - **Bets** — collapsible per-guest groups; add/edit/delete individual bet rows; per-guest
   wipe; Danger Zone (wipe all bets)
-- **Results** — add/edit/delete actual DNA result rows (breed + percentage)
+- **Results** — read-only view of both result sets; a toggle picks the active one
+  (`ActiveResultSet`: 🧪 fake/test vs ✅ real/live). Values aren't editable here.
 - **Gallery** — upload photos; drag-and-drop to reorder; delete
 
 Tab state is preserved across POST-redirects via `sessionStorage`. Admin forms submit via
@@ -226,13 +238,19 @@ makes ONE column the lone scroll region:
   left on desktop+kiosk) + ranked board; winner highlighted green (`--success-bg`) and
   **auto-expanded**; score totals show just the number (the column header already says "Pts").
 
-### Betting lock / reveal invariant
-`db.betting_is_locked()` returns **True whenever results are revealed** (in addition to manual
-`BettingLocked` and the auto-lock deadline). Operator workflow is **lock first, then reveal**;
-the invariant guarantees results are never shown while betting is open. The admin Game Controls
-reflect it (Betting shows a disabled "Locked" while results are up; "Reveal" notes it also
-locks betting). A submitted guest on a locked-but-not-revealed page sees a clear "Betting's
-closed — your bet is locked in" note, not just the title 🔒.
+### Betting phase / reveal invariant
+`db.betting_phase()` is the single source of truth, returning **`pre`** (a `BettingStartTime`
+is set and not yet reached), **`open`**, or **`closed`** (results revealed, manual
+`BettingLocked`, or past `BettingDeadline`). `betting_is_locked()` = `phase != 'open'`, so it's
+True in both `pre` and `closed` — it drives the nav lock/⏳ icon and blocks `submit_bet`.
+Operator workflow is **lock first, then reveal**; the invariant guarantees results are never
+shown while betting is open.
+
+**Login is open-phase only.** The `/bet` Name/phone form renders only when `phase == 'open'`;
+`pre` shows "Betting Opens Soon" and `closed` shows a message (linking to the leaderboard once
+revealed), each with no form. `bet_verify` also rejects any login when `phase != 'open'`, so a
+direct POST or stale cached form can't bypass it. A submitted guest on a locked page still sees
+their bet with a "Betting's closed — your bet is locked in" note.
 
 ## Scoring Algorithm
 
@@ -310,7 +328,8 @@ driving the real UI in Dockerized Chromium:
 > docker run -d --name sparky-verify -p 9997:8000 -e SECRET_KEY=verify sparky-dog-bet-web
 > # curl-loop until :9997 is up; seed via: docker exec -i sparky-verify python - <<'PY' ...
 > #   add_guest / submit_bet (BEFORE revealing — submit is blocked once locked) /
-> #   upsert_actual_result / set_config('ResultsRevealed', True) ... PY
+> #   seed an actual_results row (result_set='real') / set_config('ActiveResultSet','real') /
+> #   set_config('ResultsRevealed', True) ... PY
 > docker run --rm --network host -e BASE_URL=http://localhost:9997 -e OUT_DIR=/work/shots \
 >   -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright -e PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
 >   -v "$PWD/tests/kiosk-visual":/work -w /work mcr.microsoft.com/playwright:v1.48.0-jammy \
