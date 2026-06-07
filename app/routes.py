@@ -36,6 +36,28 @@ def _kiosk_no_store(response):
     return response
 
 
+# Anonymous, stateless pages (home / gallery / about) carry no guest data, so they can be
+# cached at Cloudflare's edge. That decouples ordinary visits from tunnel/origin health —
+# a brief tunnel hiccup no longer turns into a slow page load. Anything tied to a session
+# (a verified guest, the kiosk device, or an admin) gets an explicit no-cache so the edge
+# never serves it to someone else. The kiosk hook above still wins for kiosk devices.
+_EDGE_CACHEABLE = {'main.home', 'main.gallery', 'main.about'}
+
+
+@bp.after_app_request
+def _public_page_cache(response):
+    if session.get('kiosk'):
+        return response  # handled by _kiosk_no_store
+    anonymous = not session.get('guest') and not session.get('admin_auth')
+    if request.method == 'GET' and request.endpoint in _EDGE_CACHEABLE and anonymous:
+        response.headers['Cache-Control'] = 'public, max-age=300'
+    elif response.mimetype == 'text/html' and 'Cache-Control' not in response.headers:
+        # Other HTML pages are session-sensitive (bet / leaderboard / admin) — keep them off
+        # the edge. Static assets and the image routes set their own caching and are skipped.
+        response.headers['Cache-Control'] = 'private, no-cache'
+    return response
+
+
 def _status():
     if 'status' not in g:
         g.status = {
@@ -135,7 +157,7 @@ def bet():
                     # DB also says submitted (or guest not found) — show empty submitted view
                     return render_template('bet.html',
                         show_submitted=True, guest=guest, bet=[],
-                        leaderboard=scoring.get_leaderboard() if status['revealed'] else None,
+                        standing=None,
                         actual_results=db.get_actual_results() if status['revealed'] else None,
                         score=None,
                         status=status)
@@ -148,20 +170,22 @@ def bet():
                     if fresh_g.get('submitted_at'):
                         guest['submitted_at'] = fresh_g['submitted_at']
                         session['guest'] = guest
+                standing = db.get_guest_score_rank(guest['name']) if status['revealed'] else None
                 return render_template('bet.html',
                     show_submitted=True, guest=guest,
                     bet=bet_rows,
-                    leaderboard=scoring.get_leaderboard() if status['revealed'] else None,
+                    standing=standing,
                     actual_results=db.get_actual_results() if status['revealed'] else None,
-                    score=scoring.calculate_score(guest['name']) if status['revealed'] else None,
+                    score=standing['score'] if standing else None,
                     status=status)
         if status['locked']:
             locked_bet = db.get_bet(guest['name'])
+            standing = db.get_guest_score_rank(guest['name']) if (status['revealed'] and locked_bet) else None
             return render_template('bet.html', locked=True, guest=guest,
                 bet=locked_bet,
-                leaderboard=scoring.get_leaderboard() if status['revealed'] else None,
+                standing=standing,
                 actual_results=db.get_actual_results() if status['revealed'] and locked_bet else None,
-                score=scoring.calculate_score(guest['name']) if status['revealed'] and locked_bet else None,
+                score=standing['score'] if standing else None,
                 status=status)
         return render_template('bet.html',
             show_form=True, guest=guest,
@@ -345,6 +369,8 @@ def admin_toggle(key):
         return redirect(url_for('main.admin'))
     current = db.get_config(key)
     db.set_config(key, not db.is_true(current))
+    if key == 'ResultsRevealed':
+        db.recompute_scores()
     return redirect(url_for('main.admin'))
 
 
@@ -491,6 +517,7 @@ def admin_actual_add():
             db.upsert_actual_result(breed, int(float(pct)))
         except ValueError:
             pass
+    db.recompute_scores()
     return redirect(url_for('main.admin'))
 
 
@@ -505,6 +532,7 @@ def admin_actual_edit(result_id):
             db.upsert_actual_result(breed, int(float(pct)))
         except ValueError:
             pass
+    db.recompute_scores()
     return redirect(url_for('main.admin'))
 
 
@@ -512,6 +540,7 @@ def admin_actual_edit(result_id):
 def admin_actual_delete(result_id):
     if denied := _require_admin(): return denied
     db.delete_actual_result(result_id)
+    db.recompute_scores()
     return redirect(url_for('main.admin'))
 
 

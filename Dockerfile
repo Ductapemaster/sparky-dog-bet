@@ -17,4 +17,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--worker-class", "gevent", "--workers", "2", "--worker-connections", "100", "--timeout", "60", "wsgi:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--worker-class", "gevent", "--workers", "4", "--worker-connections", "100", "--timeout", "60", "--access-logfile", "-", "--access-logformat", "%(t)s \"%(r)s\" %(s)s %(b)sb %(L)ss", "wsgi:app"]

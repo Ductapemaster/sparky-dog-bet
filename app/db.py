@@ -104,6 +104,15 @@ def init_db():
             );
         """)
 
+        # Migration: add precomputed score/rank columns to guests if missing. These are
+        # filled by recompute_scores() so the bet page can read a guest's standing with a
+        # single lookup instead of recomputing the whole leaderboard on every view.
+        guest_cols = {r['name'] for r in conn.execute("PRAGMA table_info(guests)").fetchall()}
+        if 'score' not in guest_cols:
+            conn.execute("ALTER TABLE guests ADD COLUMN score REAL")
+        if 'rank' not in guest_cols:
+            conn.execute("ALTER TABLE guests ADD COLUMN rank INTEGER")
+
         # Seed default config — INSERT OR IGNORE leaves existing values untouched
         defaults = [
             ('BettingLocked',   'FALSE'),
@@ -130,6 +139,11 @@ def init_db():
                     "INSERT OR IGNORE INTO breeds (breed_name) VALUES (?)",
                     [(b,) for b in breed_names]
                 )
+
+    # Backfill precomputed standings for the current state (e.g. if results are already
+    # revealed at deploy time) so the bet page can read them immediately after this deploy.
+    if is_true(get_config('ResultsRevealed')):
+        recompute_scores()
 
 
 # ── Config ────────────────────────────────────────────────────
@@ -365,6 +379,65 @@ def get_actual_results():
     with _get_db() as conn:
         rows = conn.execute("SELECT breed, actual_percentage FROM actual_results").fetchall()
         return {r['breed']: float(r['actual_percentage']) for r in rows}
+
+
+def recompute_scores():
+    """Compute and persist each submitted guest's TVD score and rank into the guests table.
+
+    Called whenever the actual results change or results are revealed. Scores are a pure
+    function of (bets, actual results) and both are frozen once results are revealed (revealing
+    auto-locks betting), so materializing them lets the bet page read a standing with one lookup.
+    Uses the same TVD formula as scoring.get_leaderboard (Σ|guess−actual|/2, sort by score then
+    submission time); keep the two in sync.
+    """
+    actual = get_actual_results()
+    with _get_db() as conn:
+        # Clear first so guests with no score (or no longer submitted) end up NULL.
+        conn.execute("UPDATE guests SET score = NULL, rank = NULL")
+        if not actual:
+            return
+
+        bets_by_guest = {}
+        for r in conn.execute(
+            "SELECT b.guest_name, b.breed, b.percentage FROM bets b "
+            "JOIN guests g ON g.name = b.guest_name WHERE g.has_submitted = 1"
+        ).fetchall():
+            bets_by_guest.setdefault(r['guest_name'], {})[r['breed']] = float(r['percentage'])
+
+        submitted = conn.execute(
+            "SELECT name, submitted_at FROM guests WHERE has_submitted = 1"
+        ).fetchall()
+
+        scored = []
+        for g in submitted:
+            guess = bets_by_guest.get(g['name'], {})
+            breeds = set(actual) | set(guess)
+            score = round(sum(abs(actual.get(b, 0.0) - guess.get(b, 0.0)) for b in breeds) / 2, 1)
+            scored.append((score, g['submitted_at'] or '', g['name']))
+
+        scored.sort(key=lambda x: (x[0], x[1]))
+        for i, (score, _submitted_at, name) in enumerate(scored, start=1):
+            conn.execute(
+                "UPDATE guests SET score = ?, rank = ? WHERE name = ?", (score, i, name)
+            )
+
+
+def get_guest_score_rank(name):
+    """Return {'score', 'rank', 'total'} for a submitted, scored guest, or None.
+
+    Reads the precomputed columns (see recompute_scores) — no leaderboard computation.
+    """
+    with _get_db() as conn:
+        row = conn.execute(
+            "SELECT score, rank FROM guests WHERE name = ? AND has_submitted = 1",
+            (str(name).strip(),)
+        ).fetchone()
+        total = conn.execute(
+            "SELECT COUNT(*) FROM guests WHERE has_submitted = 1 AND score IS NOT NULL"
+        ).fetchone()[0]
+    if not row or row['score'] is None:
+        return None
+    return {'score': row['score'], 'rank': row['rank'], 'total': total}
 
 
 # ── Admin: Guests ─────────────────────────────────────────────

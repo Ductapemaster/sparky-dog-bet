@@ -93,17 +93,13 @@
 
   {# ── Submitted — read-only view (with Edit) ── #}
   {% if show_submitted %}
-  {% if leaderboard %}
-  {% set ns = namespace(rank=none) %}
-  {% for entry in leaderboard %}{% if entry.name == guest.name %}{% set ns.rank = loop.index %}{% endif %}{% endfor %}
-  {% endif %}
-  {% if leaderboard and ns.rank is not none %}
+  {% if standing %}
   <div class="card" style="margin-bottom:1.25rem; border-color: var(--success-text); background: var(--success-bg);">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
       <div style="display:flex; align-items:center; gap:0.6rem;">
         <span style="font-size:1.5rem; line-height:1;">🏆</span>
         <div>
-          <div style="font-size:1.1rem; font-weight:700; color: var(--success-text);">{{ guest.name.split()[0] }}, you placed #{{ ns.rank }} of {{ leaderboard|length }}</div>
+          <div style="font-size:1.1rem; font-weight:700; color: var(--success-text);">{{ guest.name.split()[0] }}, you placed #{{ standing.rank }} of {{ standing.total }}</div>
           <div class="muted" style="font-size:0.8rem;">{{ score }} pts off · <a href="{{ url_for('main.leaderboard') }}">See full leaderboard →</a></div>
         </div>
       </div>
