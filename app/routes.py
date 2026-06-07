@@ -207,6 +207,14 @@ def bet_verify():
     # without navigating. Such requests carry X-Requested-With: fetch and want JSON.
     wants_json = request.headers.get('X-Requested-With') == 'fetch'
 
+    # Login only makes sense while betting is open. The login form is hidden in
+    # the 'pre' and 'closed' phases, but guard the endpoint too so a direct POST
+    # or a stale cached form can't sneak a guest in before/after the window.
+    if db.betting_phase() != 'open':
+        if wants_json:
+            return jsonify(ok=False, error='Betting is not open right now.')
+        return redirect(url_for('main.bet'))
+
     result = db.verify_guest(name, phone4)
     if not result['verified']:
         if wants_json:

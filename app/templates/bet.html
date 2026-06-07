@@ -369,25 +369,36 @@
     </form>
   </div>
 
-  {# ── Identity lookup (login) ── #}
+  {# ── Identity lookup (login) — only when betting is open. Before it opens
+     ('pre') or once it's closed, there's nothing to log in for, so we show a
+     message-only card and the /bet/verify endpoint rejects logins too. ── #}
   {% else %}
+  {% if status.phase == 'pre' %}
   <div class="card" style="margin-bottom:1.25rem;">
-    {% if status.phase == 'pre' %}
     <h3 class="card-title">Betting Opens Soon</h3>
-    <p style="margin-bottom:1.25rem;">
+    <p style="margin-bottom:0;">
       {% if status.start_display %}Betting opens {{ status.start_display }} — check back then to place your bet.{% else %}Betting isn't open yet — check back soon to place your bet.{% endif %}
     </p>
-    {% elif status.locked %}
+  </div>
+  {% elif status.locked %}
+  <div class="card" style="margin-bottom:1.25rem;">
     <h3 class="card-title">Betting is Closed</h3>
-    <p style="margin-bottom:1.25rem;">
-      Betting's closed for new bets — find your name to see the bet you submitted.
+    {% if status.revealed %}
+    <p style="margin-bottom:0;">
+      Results are in! See the <a href="{{ url_for('main.leaderboard') }}">leaderboard</a> to find out how everyone did.
     </p>
     {% else %}
+    <p style="margin-bottom:0;">
+      Betting's closed{% if status.deadline_display %} (as of {{ status.deadline_display }}){% endif %}. We'll reveal Sparky's results at the reception — check back then!
+    </p>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="card" style="margin-bottom:1.25rem;">
     <h3 class="card-title">Place My Bet</h3>
     <p style="margin-bottom:1.25rem;">
       Find your name to place a bet — or to check one you've already submitted.
     </p>
-    {% endif %}
 
     {% if error %}
     <div class="alert alert-error">{{ error }}</div>
@@ -417,6 +428,7 @@
       <button type="submit" class="btn btn-primary btn-full">Continue &rarr;</button>
     </form>
   </div>
+  {% endif %}
   {% endif %}
 
   </section>{# /#bet-panel #}
